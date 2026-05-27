@@ -12,7 +12,7 @@ set -euo pipefail
 # Abhängigkeiten, baut das Frontend und richtet systemd-Dienste ein.
 
 PORJECT_DIR="/opt/portal"
-REPO_URL="https://github.com/yourorg/portal.git"   # <-- HIER ANPASSEN
+REPO_URL="https://github.com/JonaSnoek/Diensteneu.git"
 BRANCH="main"
 BACKEND_PORT=8000
 FRONTEND_PORT=80

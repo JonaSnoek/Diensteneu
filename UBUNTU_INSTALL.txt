@@ -1,0 +1,184 @@
+===========================================================
+ CENTRAL SERVICE PORTAL – Ubuntu Installation (22.04+)
+===========================================================
+
+VORAUSSETZUNGEN
+- Ubuntu 22.04 oder neuer (getestet mit 22.04 / 24.04)
+- Root-Zugriff (sudo)
+- Internetverbindung
+
+===========================================================
+ SCHNELLINSTALLATION (EMPFOLLEN)
+===========================================================
+
+  sudo apt-get update && sudo apt-get install -y git
+  git clone https://github.com/JonaSnoek/Diensteneu.git /opt/portal
+  cd /opt/portal
+  sudo bash install.sh
+
+Das Skript installiert automatisch:
+  - Python 3 + venv + pip
+  - Node.js + npm
+  - nginx als Reverse-Proxy
+  - Python-Abhängigkeiten (venv)
+  - Frontend (npm ci + build)
+  - systemd-Service (portal-backend)
+  - nginx-Konfiguration
+
+Nach dem Setup:
+  - Portal erreichbar unter: http://<SERVER-IP>
+  - Einrichtung über den Browser (Setup-Wizard)
+
+===========================================================
+ DETAILIERTE SCHRITT-FÜR-SCHRITT-INSTALLATION
+===========================================================
+
+1) SYSTEMPAKETE INSTALLIEREN
+─────────────────────────────
+
+  sudo apt-get update
+  sudo apt-get install -y python3 python3-venv python3-pip nodejs npm nginx git
+
+2) PROJEKT KLONEN
+──────────────────
+
+  sudo git clone https://github.com/JonaSnoek/Diensteneu.git /opt/portal
+  cd /opt/portal
+
+3) BACKEND EINRICHTEN
+──────────────────────
+
+  python3 -m venv venv
+  source venv/bin/activate
+  pip install -r backend/requirements.txt
+  deactivate
+
+  mkdir -p backend/data/config backend/data/modules backend/data/uploads
+
+4) FRONTEND BAUEN
+──────────────────
+
+  cd frontend
+  npm install
+  npm run build
+  cd ..
+
+5) SYSTEMD-SERVICE EINRICHTEN
+──────────────────────────────
+
+  sudo tee /etc/systemd/system/portal-backend.service <<'EOF'
+  [Unit]
+  Description=Central Portal Backend
+  After=network.target
+
+  [Service]
+  Type=simple
+  User=www-data
+  Group=www-data
+  WorkingDirectory=/opt/portal/backend
+  Environment="PATH=/opt/portal/venv/bin"
+  ExecStart=/opt/portal/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+  Restart=always
+  RestartSec=5
+
+  [Install]
+  WantedBy=multi-user.target
+  EOF
+
+  sudo systemctl daemon-reload
+  sudo systemctl enable portal-backend
+  sudo systemctl start portal-backend
+
+6) NGINX REVERSE-PROXY KONFIGURIEREN
+─────────────────────────────────────
+
+  sudo tee /etc/nginx/sites-available/portal <<'EOF'
+  server {
+      listen 80 default_server;
+      server_name _;
+
+      root /opt/portal/frontend/dist;
+      index index.html;
+
+      gzip on;
+      gzip_types text/css application/javascript image/svg+xml;
+
+      location / {
+          try_files $uri $uri/ /index.html;
+      }
+
+      location /api/ {
+          proxy_pass http://127.0.0.1:8000;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_set_header Connection '';
+          proxy_http_version 1.1;
+          chunked_transfer_encoding on;
+          proxy_read_timeout 120s;
+          proxy_send_timeout 120s;
+      }
+
+      location /api/uploads/ {
+          alias /opt/portal/backend/data/uploads/;
+      }
+  }
+  EOF
+
+  sudo rm -f /etc/nginx/sites-enabled/default
+  sudo ln -sf /etc/nginx/sites-available/portal /etc/nginx/sites-enabled/
+  sudo systemctl enable nginx
+  sudo systemctl restart nginx
+
+7) BEREICHTIGUNGEN SETZEN
+───────────────────────────
+
+  sudo chown -R www-data:www-data /opt/portal
+  sudo chmod 755 /opt/portal
+
+8) PORTAL IM BROWSER ÖFFNEN
+────────────────────────────
+
+  http://<SERVER-IP>
+
+  → Der Setup-Wizard erscheint automatisch beim ersten Aufruf.
+  → Lege den Admin-Benutzer und ggf. LDAP-Einstellungen an.
+
+===========================================================
+ NÜTZLICHE BEFEHLE
+===========================================================
+
+  # Logs des Backends anzeigen
+  sudo journalctl -fu portal-backend
+
+  # Logs von nginx anzeigen
+  sudo journalctl -fu nginx
+
+  # Backend neustarten
+  sudo systemctl restart portal-backend
+
+  # Status prüfen
+  sudo systemctl status portal-backend
+  sudo systemctl status nginx
+
+  # API-Dokumentation (Swagger UI)
+  http://<SERVER-IP>/api/docs
+
+===========================================================
+ FEHLERBEHEBUNG
+===========================================================
+
+Problem: "502 Bad Gateway"
+  → Prüfe: sudo systemctl status portal-backend
+  → Prüfe: curl http://127.0.0.1:8000/
+
+Problem: "File not found" / weiße Seite
+  → Frontend-Build fehlt: cd /opt/portal/frontend && npm run build
+  → Prüfe nginx-Konfiguration: sudo nginx -t
+
+Problem: Datenbank-Fehler
+  → Lösche die Datenbank: rm /opt/portal/backend/data/portal.db
+  → Danach Setup erneut durchführen
+
+===========================================================
