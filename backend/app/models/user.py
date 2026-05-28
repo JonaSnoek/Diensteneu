@@ -23,7 +23,6 @@ class User(Base):
     ldap_dn = Column(String, nullable=True)
     ldap_groups = Column(JSON, default=list) # Caches user's LDAP groups on login/sync
     role = Column(String, default="User") # Root, Admin, Creator, User, Guest
-    role_overridden = Column(Boolean, default=False) # True = admin manually set role, don't overwrite on LDAP sync/login
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
