@@ -44,7 +44,7 @@ def authenticate_ldap_user(username: str, password: str) -> Optional[Dict[str, A
                 search_base=ldap_cfg.base_dn,
                 search_filter=user_filter,
                 search_scope=SUBTREE,
-                attributes=['dn', 'cn', 'displayName', 'mail', 'memberOf', 'uid']
+                attributes=['cn', 'displayName', 'mail', 'memberOf', 'uid']
             )
             
             if not conn.entries:
@@ -125,7 +125,7 @@ def test_ldap_connection(ldap_cfg: LdapServerConfig) -> Tuple[bool, str]:
             search_base=ldap_cfg.base_dn,
             search_filter="(objectClass=*)",
             search_scope=SUBTREE,
-            attributes=['dn']
+            attributes=['cn']
         )
         
         entry_count = len(conn.entries)
