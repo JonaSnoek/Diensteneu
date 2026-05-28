@@ -37,15 +37,22 @@ Nach dem Setup:
 ─────────────────────────────
 
   sudo apt-get update
-  sudo apt-get install -y python3 python3-venv python3-pip nodejs npm nginx git
+  sudo apt-get install -y python3 python3-venv python3-pip nginx git curl
 
-2) PROJEKT KLONEN
+2) NODE.JS 22 (LTS) INSTALLIEREN
+─────────────────────────────────
+  # Ubuntu-Standard Node.js ist zu alt für Vite 6 – daher via NodeSource:
+  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
+  sudo apt-get install -y nodejs
+  node --version   # sollte 22.x ausgeben
+
+3) PROJEKT KLONEN
 ──────────────────
 
   sudo git clone https://github.com/JonaSnoek/Diensteneu.git /opt/portal
   cd /opt/portal
 
-3) BACKEND EINRICHTEN
+4) BACKEND EINRICHTEN
 ──────────────────────
 
   python3 -m venv venv

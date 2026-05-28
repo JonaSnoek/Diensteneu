@@ -32,7 +32,11 @@ info "Aktualisiere Paketquellen und installiere Abhängigkeiten..."
 apt-get update -qq
 apt-get install -y -qq \
     curl git python3 python3-venv python3-pip \
-    nodejs npm nginx
+    nginx
+
+# Node.js 22 LTS via NodeSource installieren (Ubuntu-Standard ist zu alt für Vite 6+)
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y -qq nodejs
 
 info "Python: $(python3 --version), Node: $(node --version), npm: $(npm --version)"
 
