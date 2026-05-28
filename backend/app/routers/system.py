@@ -34,7 +34,6 @@ LOGO_DIR = UPLOADS_DIR / "logos"
 
 @router.post("/upload-logo")
 async def upload_logo(
-    request: Request,
     file: UploadFile = File(...),
     admin: User = Depends(require_admin)
 ):
@@ -55,8 +54,7 @@ async def upload_logo(
     with open(dest, "wb") as f:
         f.write(content)
 
-    base_url = str(request.base_url).rstrip("/")
-    logo_url = f"{base_url}/api/uploads/logos/{unique_name}"
+    logo_url = f"/api/uploads/logos/{unique_name}"
     config = load_config()
     config.system_settings.logo_url = logo_url
     save_config(config)
