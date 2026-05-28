@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../utils/api';
-import { Shield, Database, Cpu, Settings, CheckCircle } from 'lucide-react';
+import { Shield, Database, Cpu, CheckCircle } from 'lucide-react';
 
 type SetupProps = {
   onSetupCompleted: () => void;

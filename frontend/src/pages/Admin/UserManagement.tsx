@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import type { UserType } from '../../App';
-import { UserPlus, Edit2, Trash2, Shield, ShieldCheck, ShieldAlert, Mail, UserCheck } from 'lucide-react';
+import { UserPlus, Edit2, Trash2, ShieldCheck, ShieldAlert, Mail, UserCheck } from 'lucide-react';
 
 type UserManagementProps = {
   currentUser: UserType;

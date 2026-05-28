@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api, resolveUrl } from '../../utils/api';
 import type { SystemSettingsType } from '../../App';
-import { Settings, Save, Check, ShieldAlert, Cpu, Upload, Image } from 'lucide-react';
+import { Settings, Save, Upload, Image } from 'lucide-react';
 
 type SystemSettingsProps = {
   settings: SystemSettingsType;
