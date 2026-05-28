@@ -68,7 +68,6 @@ def login(
             if user:
                 user.display_name = ldap_details["display_name"]
                 user.email = ldap_details["email"]
-                user.role = mapped_role
                 user.ldap_dn = ldap_details["dn"]
                 user.ldap_groups = ldap_details["groups"]
                 if not user.is_active:

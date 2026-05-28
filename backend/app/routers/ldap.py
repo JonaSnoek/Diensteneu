@@ -135,7 +135,6 @@ def sync_ldap_now(
             if local_user:
                 local_user.display_name = user_data["display_name"]
                 local_user.email = user_data["email"]
-                local_user.role = mapped_role
                 local_user.is_ldap = True
                 local_user.ldap_dn = user_data["dn"]
                 local_user.ldap_groups = user_data["groups"]
