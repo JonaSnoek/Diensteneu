@@ -37,7 +37,7 @@ def authenticate_ldap_user(username: str, password: str) -> Optional[Dict[str, A
             if "{username}" in raw:
                 user_filter = raw.format(username=username)
             else:
-                username_clause = f"(|(uid={username})(sAMAccountName={username})(cn={username}))"
+                username_clause = f"(|(uid={username})(cn={username}))"
                 if raw.startswith("(&"):
                     inner = raw[2:-1].strip()
                     user_filter = f"(&{inner}{username_clause})"
