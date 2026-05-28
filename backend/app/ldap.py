@@ -37,7 +37,7 @@ def authenticate_ldap_user(username: str, password: str) -> Optional[Dict[str, A
             if "{username}" in raw:
                 user_filter = raw.format(username=username)
             else:
-                user_filter = f"(&({raw})(|(uid={username})(sAMAccountName={username})))"
+                user_filter = f"(&({raw})(|(uid={username})(sAMAccountName={username})(cn={username})))"
             logger.info(f"Searching LDAP user: {username} with filter {user_filter} on {ldap_cfg.server_url}")
             
             conn.search(
