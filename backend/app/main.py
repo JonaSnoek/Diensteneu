@@ -42,6 +42,16 @@ def startup_event():
         except Exception as e:
             logger.error(f"Failed to auto-verify database schemas: {e}")
 
+        # DB migrations for existing databases
+        try:
+            from app.database import engine
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN role_overridden BOOLEAN DEFAULT 0"))
+                conn.commit()
+        except Exception:
+            pass  # Column already exists
+
 # Global Middleware to enforce Setup Wizard redirect
 @app.middleware("http")
 async def check_setup_status_middleware(request: Request, call_next):

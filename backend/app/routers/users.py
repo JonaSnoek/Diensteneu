@@ -95,6 +95,8 @@ def update_user(
         user.email = user_data.email
     if user_data.role is not None:
         user.role = user_data.role
+        if user.is_ldap:
+            user.role_overridden = True
     if user_data.is_active is not None:
         # Prevent Root user from self-deactivating
         if user.role == "Root" and not user_data.is_active:
