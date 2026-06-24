@@ -24,7 +24,6 @@ class SystemSettingsUpdate(BaseModel):
     session_timeout_minutes: Optional[int] = None
 
 class SetupWizardRequest(BaseModel):
-class SetupWizardRequest(BaseModel):
     # Database
     database_url: str = "sqlite:///backend/data/portal.db"
     
