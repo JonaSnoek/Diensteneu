@@ -44,12 +44,12 @@ def oidc_login(request: Request):
 
     return {"redirect_url": redirect_url}
 
-@router.get("/callback")
+@router.get("/callback", response_model=None)
 def oidc_callback(
     code: Optional[str] = None,
     state: Optional[str] = None,
     error: Optional[str] = None,
-    request: Optional[Request] = None,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     if error:
