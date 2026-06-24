@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import type { UserType, SystemSettingsType } from '../../App';
-import { Users, Cpu, LayoutGrid, FolderCode, Settings, ShieldAlert, ChevronLeft, LogOut } from 'lucide-react';
+import { Users, Cpu, Shield, LayoutGrid, FolderCode, Settings, ShieldAlert, ChevronLeft, LogOut } from 'lucide-react';
 
 // Subcomponents (we will create these next)
 import UserManagement from './UserManagement';
 import LdapSettings from './LdapSettings';
+import OidcSettings from './OidcSettings';
 import LauncherManagement from './LauncherManagement';
 import ModuleManagement from './ModuleManagement';
 import SystemSettings from './SystemSettings';
@@ -17,7 +18,7 @@ type AdminPanelProps = {
   onLogout: () => void;
 };
 
-type ActiveTabType = 'users' | 'ldap' | 'launchers' | 'modules' | 'system' | 'audit';
+type ActiveTabType = 'users' | 'ldap' | 'oidc' | 'launchers' | 'modules' | 'system' | 'audit';
 
 function AdminPanel({ user, settings, onNavigate, onLogout }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<ActiveTabType>('users');
@@ -28,6 +29,8 @@ function AdminPanel({ user, settings, onNavigate, onLogout }: AdminPanelProps) {
         return <UserManagement currentUser={user} />;
       case 'ldap':
         return <LdapSettings />;
+      case 'oidc':
+        return <OidcSettings />;
       case 'launchers':
         return <LauncherManagement />;
       case 'modules':
@@ -45,6 +48,7 @@ function AdminPanel({ user, settings, onNavigate, onLogout }: AdminPanelProps) {
     switch (activeTab) {
       case 'users': return 'Benutzerverwaltung';
       case 'ldap': return 'LDAP / AD Anbindungen';
+      case 'oidc': return 'SSO (OpenID Connect)';
       case 'launchers': return 'Launcher & Kacheln';
       case 'modules': return 'HTML-Module & Werkzeuge';
       case 'system': return 'Systemeinstellungen';
@@ -113,6 +117,7 @@ function AdminPanel({ user, settings, onNavigate, onLogout }: AdminPanelProps) {
             {[
               { id: 'users', label: 'Benutzer', icon: Users },
               { id: 'ldap', label: 'LDAP / AD', icon: Cpu },
+              { id: 'oidc', label: 'SSO (OIDC)', icon: Shield },
               { id: 'launchers', label: 'Kacheln (Tiles)', icon: LayoutGrid },
               { id: 'modules', label: 'HTML-Module', icon: FolderCode },
               { id: 'system', label: 'Einstellungen', icon: Settings },

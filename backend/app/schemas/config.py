@@ -23,7 +23,16 @@ class SystemSettingsUpdate(BaseModel):
     allow_local_registration: Optional[bool] = None
     session_timeout_minutes: Optional[int] = None
 
-class SetupWizardRequest(BaseModel):
+class OidcConfigSchema(BaseModel):
+    enabled: bool = False
+    issuer_url: str = ""
+    client_id: str = ""
+    client_secret: str = ""
+    redirect_uri: str = ""
+    scopes: str = "openid profile email"
+    username_claim: str = "preferred_username"
+    display_name_claim: str = "name"
+    email_claim: str = "email"
     # Database
     database_url: str = "sqlite:///backend/data/portal.db"
     
