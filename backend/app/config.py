@@ -31,17 +31,6 @@ class LdapServerConfig(BaseModel):
     sync_interval_minutes: int = 60
     enabled: bool = False
 
-class OidcConfig(BaseModel):
-    enabled: bool = False
-    issuer_url: str = ""
-    client_id: str = ""
-    client_secret: str = ""
-    redirect_uri: str = ""
-    scopes: str = "openid profile email"
-    username_claim: str = "preferred_username"
-    display_name_claim: str = "name"
-    email_claim: str = "email"
-
 class SystemSettings(BaseModel):
     portal_name: str = "Central Service Portal"
     logo_url: Optional[str] = None
@@ -58,7 +47,6 @@ class AppConfig(BaseModel):
     algorithm: str = "HS256"
     system_settings: SystemSettings = Field(default_factory=SystemSettings)
     ldap_configs: List[LdapServerConfig] = Field(default_factory=list)
-    oidc_config: Optional[OidcConfig] = None
 
 _active_config: Optional[AppConfig] = None
 

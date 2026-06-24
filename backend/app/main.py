@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.config import load_config, UPLOADS_DIR
 from app.database import create_tables
-from app.routers import setup, auth, users, ldap, launchers, modules, audit, system, oidc
+from app.routers import setup, auth, users, ldap, launchers, modules, audit, system
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -53,9 +53,6 @@ async def check_setup_status_middleware(request: Request, call_next):
         "/api/setup/initialize",
         "/api/system/settings",
         "/api/ldap/test-connection",
-        "/api/auth/oidc/login",
-        "/api/auth/oidc/callback",
-        "/api/auth/oidc/status",
         "/docs",
         "/openapi.json",
         "/redoc"
@@ -82,7 +79,6 @@ app.include_router(launchers.router, prefix="/api")
 app.include_router(modules.router, prefix="/api")
 app.include_router(audit.router, prefix="/api")
 app.include_router(system.router, prefix="/api")
-app.include_router(oidc.router, prefix="/api")
 
 # Serve uploaded files (logos, etc.)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
