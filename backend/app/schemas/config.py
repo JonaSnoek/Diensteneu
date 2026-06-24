@@ -33,6 +33,8 @@ class OidcConfigSchema(BaseModel):
     username_claim: str = "preferred_username"
     display_name_claim: str = "name"
     email_claim: str = "email"
+
+class SetupWizardRequest(BaseModel):
     # Database
     database_url: str = "sqlite:///backend/data/portal.db"
     
