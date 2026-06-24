@@ -46,10 +46,10 @@ def oidc_login(request: Request):
 
 @router.get("/callback", response_model=None)
 def oidc_callback(
+    request: Request,
     code: Optional[str] = None,
     state: Optional[str] = None,
     error: Optional[str] = None,
-    request: Request,
     db: Session = Depends(get_db)
 ):
     if error:
