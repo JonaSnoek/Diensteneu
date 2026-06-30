@@ -88,50 +88,38 @@ function Dashboard(_props: DashboardProps) {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', justifyContent: 'space-between' }}>
+      <div className="dashboard-header">
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 700 }}>
             {selectedCategory === 'All' ? 'Alle Dienste' : selectedCategory}
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
             {filteredLaunchers.length} Kacheln
           </p>
         </div>
-        <div style={{ position: 'relative', width: '280px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+        <div className="search-wrap">
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
           <input
             type="text"
             className="form-input"
-            placeholder="Kacheln durchsuchen..."
+            placeholder="Suchen..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            style={{ paddingLeft: '36px', borderRadius: 'var(--radius-sm)' }}
+            style={{ paddingLeft: '36px' }}
           />
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
+      <div className="category-filters">
         <button
-          onClick={() => {}}
-          style={{
-            padding: '8px 16px', borderRadius: '20px', border: 'none',
-            background: selectedCategory === 'All' ? 'var(--primary)' : 'var(--bg-elevated)',
-            color: selectedCategory === 'All' ? '#fff' : 'var(--text-secondary)',
-            fontSize: '0.82rem', cursor: 'pointer', fontWeight: selectedCategory === 'All' ? 600 : 400,
-          }}
+          className={`cat-btn ${selectedCategory === 'All' ? 'cat-btn-active' : ''}`}
         >
           Alle
         </button>
         {categories.map(cat => (
           <button
             key={cat}
-            onClick={() => {}}
-            style={{
-              padding: '8px 16px', borderRadius: '20px', border: 'none',
-              background: selectedCategory === cat ? 'var(--primary)' : 'var(--bg-elevated)',
-              color: selectedCategory === cat ? '#fff' : 'var(--text-secondary)',
-              fontSize: '0.82rem', cursor: 'pointer', fontWeight: selectedCategory === cat ? 600 : 400,
-            }}
+            className={`cat-btn ${selectedCategory === cat ? 'cat-btn-active' : ''}`}
           >
             {cat}
           </button>

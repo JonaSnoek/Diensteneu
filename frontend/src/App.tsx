@@ -5,10 +5,6 @@ import Layout from './components/Layout';
 import Setup from './pages/Setup';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import NetworkView from './pages/NetworkView';
-import ServerView from './pages/ServerView';
-import VirtualizationView from './pages/VirtualizationView';
-import MonitoringView from './pages/MonitoringView';
 import DocumentationView from './pages/DocumentationView';
 import AdminView from './pages/Admin/AdminView';
 import UserManagement from './pages/Admin/UserManagement';
@@ -148,10 +144,6 @@ function App() {
           <Route element={<Layout user={user} onLogout={handleLogout} />}>
             <Route path="/desktop" element={<Dashboard />} />
             <Route path="/desktop/:category" element={<Dashboard />} />
-          <Route path="/netzwerk" element={<NetworkView />} />
-          <Route path="/server" element={<ServerView />} />
-          <Route path="/virtualisierung" element={<VirtualizationView />} />
-          <Route path="/monitoring" element={<MonitoringView />} />
           <Route path="/dokumentation" element={<DocumentationView />} />
           <Route path="/admin" element={<AdminView user={user} />}>
             <Route index element={<Navigate to="/admin/users" replace />} />
