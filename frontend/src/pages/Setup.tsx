@@ -14,8 +14,8 @@ function Setup({ onSetupCompleted }: SetupProps) {
   // State variables for Setup wizard
   const [dbUrl, setDbUrl] = useState('sqlite:///portal.db');
   const [portalName, setPortalName] = useState('Central Service Portal');
-  const [primaryColor, setPrimaryColor] = useState('#00c8ff');
-  const [accentColor, setAccentColor] = useState('#9d00ff');
+  const [primaryColor, setPrimaryColor] = useState('#2563eb');
+  const [accentColor, setAccentColor] = useState('#1d4ed8');
   const [allowGuest, setAllowGuest] = useState(true);
 
   // LDAP optional state

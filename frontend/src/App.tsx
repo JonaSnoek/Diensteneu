@@ -1,9 +1,22 @@
 import { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { api, apiEvents } from './utils/api';
+import Layout from './components/Layout';
 import Setup from './pages/Setup';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import AdminPanel from './pages/Admin/AdminPanel';
+import NetworkView from './pages/NetworkView';
+import ServerView from './pages/ServerView';
+import VirtualizationView from './pages/VirtualizationView';
+import MonitoringView from './pages/MonitoringView';
+import DocumentationView from './pages/DocumentationView';
+import AdminView from './pages/Admin/AdminView';
+import UserManagement from './pages/Admin/UserManagement';
+import LdapSettings from './pages/Admin/LdapSettings';
+import LauncherManagement from './pages/Admin/LauncherManagement';
+import ModuleManagement from './pages/Admin/ModuleManagement';
+import SystemSettings from './pages/Admin/SystemSettings';
+import AuditLogs from './pages/Admin/AuditLogs';
 
 export type UserType = {
   authenticated: boolean;
@@ -27,60 +40,45 @@ export type SystemSettingsType = {
 };
 
 function hexToRgb(hex: string): string {
-  if (!hex) return '0, 200, 255';
+  if (!hex) return '59, 130, 246';
   const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
   const fullHex = hex.replace(shorthandRegex, (_, r, g, b) => r + r + g + g + b + b);
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(fullHex);
   return result
     ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
-    : '0, 0, 0';
+    : '59, 130, 246';
 }
 
 function App() {
-  const [page, setPage] = useState<'loading' | 'setup' | 'login' | 'dashboard' | 'admin'>('loading');
+  const [ready, setReady] = useState(false);
+  const [page, setPage] = useState<'loading' | 'setup' | 'login' | 'app'>('loading');
   const [user, setUser] = useState<UserType | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [settings, setSettings] = useState<SystemSettingsType | null>(null);
 
   const fetchSettingsAndCheckAuth = async () => {
     try {
-      // 1. Fetch system details (non-blocking)
       const sysSettings = await api.get('/system/settings') as SystemSettingsType;
       setSettings(sysSettings);
-      
-      // Inject CSS variables
+
       document.documentElement.style.setProperty('--primary-color', sysSettings.primary_color);
-      document.documentElement.style.setProperty('--accent-color', sysSettings.accent_color);
       document.documentElement.style.setProperty('--primary-rgb', hexToRgb(sysSettings.primary_color));
-      document.documentElement.style.setProperty('--accent-rgb', hexToRgb(sysSettings.accent_color));
       document.title = sysSettings.portal_name;
 
-      // 2. Check setup status
       const setupStatus = await api.get('/setup/status') as { setup_completed: boolean };
       if (!setupStatus.setup_completed) {
         setPage('setup');
         return;
       }
 
-      // 3. Check authentication status
       try {
         const me = await api.get('/auth/me') as UserType;
         setUser(me);
-        setPage('dashboard');
-      } catch (authError) {
-        // me failed (401 or guest access blocked)
+        setPage('app');
+      } catch {
         if (sysSettings.allow_guest_access) {
-          // Setup guest user payload
-          setUser({
-            authenticated: false,
-            username: 'guest',
-            display_name: 'Gast',
-            email: null,
-            role: 'Guest',
-            is_ldap: false,
-            ldap_dn: null
-          });
-          setPage('dashboard');
+          setUser({ authenticated: false, username: 'guest', display_name: 'Gast', email: null, role: 'Guest', is_ldap: false, ldap_dn: null });
+          setPage('app');
         } else {
           setPage('login');
         }
@@ -88,153 +86,89 @@ function App() {
     } catch (e) {
       console.error("Initialization failed: ", e);
       setErrorMessage(e instanceof Error ? e.message : String(e));
-      // Fallback navigation based on setup status
       try {
         const setupStatus = await api.get('/setup/status') as { setup_completed: boolean };
-        if (!setupStatus.setup_completed) {
-          setPage('setup');
-        } else {
-          setPage('login');
-        }
-      } catch (innerError) {
-        setPage('setup'); // Safe fallback
+        if (!setupStatus.setup_completed) setPage('setup');
+        else setPage('login');
+      } catch {
+        setPage('setup');
       }
     }
   };
 
   useEffect(() => {
     fetchSettingsAndCheckAuth();
-
-    // Register API interceptor events
-    apiEvents.on('SETUP_REQUIRED', () => {
-      setPage('setup');
-    });
-
+    apiEvents.on('SETUP_REQUIRED', () => setPage('setup'));
     apiEvents.on('UNAUTHORIZED', () => {
       setUser(null);
-      if (settings && settings.allow_guest_access) {
-        // Fallback to guest
-        setUser({
-          authenticated: false,
-          username: 'guest',
-          display_name: 'Gast',
-          email: null,
-          role: 'Guest',
-          is_ldap: false,
-          ldap_dn: null
-        });
-        setPage('dashboard');
-      } else {
-        setPage('login');
-      }
+      fetchSettingsAndCheckAuth();
     });
   }, []);
 
-  const handleLoginSuccess = (userPayload: UserType, token: string) => {
-    localStorage.setItem('access_token', token);
-    setUser(userPayload);
-    setPage('dashboard');
-  };
-
-  const handleLogout = async () => {
-    try {
-      await api.post('/auth/logout');
-    } catch (e) {
-      // Ignore errors on logout
-    }
-    localStorage.removeItem('access_token');
-    setUser(null);
-    fetchSettingsAndCheckAuth();
-  };
-
   if (errorMessage) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        color: 'red',
-        gap: '20px'
-      }}>
-        <p>❗️ Fehler bei der Initialisierung:</p>
-        <pre>{errorMessage}</pre>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--danger)', gap: '16px', background: 'var(--bg)' }}>
+        <p style={{ fontWeight: 600 }}>Fehler bei der Initialisierung</p>
+        <pre style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{errorMessage}</pre>
+        <button className="btn btn-primary" onClick={fetchSettingsAndCheckAuth}>Erneut versuchen</button>
       </div>
     );
   }
 
   if (page === 'loading') {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        gap: '20px'
-      }}>
-        <div style={{
-          width: '50px',
-          height: '50px',
-          border: '3px solid rgba(0, 200, 255, 0.1)',
-          borderTopColor: 'var(--primary-color, #00c8ff)',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }} />
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Portal lädt...</p>
-        <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '16px', background: 'var(--bg)' }}>
+        <div className="spinner" />
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Portal lädt...</p>
       </div>
     );
   }
 
-  switch (page) {
-    case 'setup':
-      return <Setup onSetupCompleted={fetchSettingsAndCheckAuth} />;
-    case 'login':
-      // Ensure settings are loaded before showing login page
-      return settings ? (
-        <Login onLoginSuccess={handleLoginSuccess} settings={settings} />
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-          <p>Loading...</p>
-        </div>
-      );
-    case 'dashboard':
-      // Settings required for dashboard
-      return (settings && user) ? (
-        <Dashboard 
-          user={user} 
-          onNavigate={(p) => setPage(p)} 
-          onLogout={handleLogout}
-          settings={settings}
-        />
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-          <p>Lädt Dashboard...</p>
-        </div>
-      );
-    case 'admin':
-      // Settings required for admin panel
-      return (settings && user) ? (
-        <AdminPanel 
-          user={user} 
-          onNavigate={(p) => setPage(p)} 
-          onLogout={handleLogout}
-          settings={settings}
-        />
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-          <p>Lädt Admin‑Panel...</p>
-        </div>
-      );
-    default:
-      return <div>Unbekannte Seite.</div>;
+  if (page === 'setup') {
+    return <Setup onSetupCompleted={fetchSettingsAndCheckAuth} />;
   }
+
+  if (page === 'login' || !user) {
+    return <Login onLoginSuccess={(userPayload, token) => {
+      localStorage.setItem('access_token', token);
+      setUser(userPayload);
+      setPage('app');
+    }} settings={settings} />;
+  }
+
+  const handleLogout = async () => {
+    try { await api.post('/auth/logout'); } catch {}
+    localStorage.removeItem('access_token');
+    setUser(null);
+    setPage('login');
+  };
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<Layout user={user} onLogout={handleLogout} />}>
+          <Route path="/desktop" element={<Dashboard user={user} settings={settings!} onNavigate={(p) => { if (p === 'admin') setPage('app'); }} />} />
+          <Route path="/desktop/:category" element={<Dashboard user={user} settings={settings!} onNavigate={(p) => { if (p === 'admin') setPage('app'); }} />} />
+          <Route path="/netzwerk" element={<NetworkView />} />
+          <Route path="/server" element={<ServerView />} />
+          <Route path="/virtualisierung" element={<VirtualizationView />} />
+          <Route path="/monitoring" element={<MonitoringView />} />
+          <Route path="/dokumentation" element={<DocumentationView />} />
+          <Route path="/admin" element={<AdminView user={user} settings={settings!} onNavigate={() => {}} />}>
+            <Route index element={<Navigate to="/admin/users" replace />} />
+            <Route path="users" element={<UserManagement currentUser={user} />} />
+            <Route path="ldap" element={<LdapSettings />} />
+            <Route path="launchers" element={<LauncherManagement />} />
+            <Route path="modules" element={<ModuleManagement currentUser={user} />} />
+            <Route path="system" element={<SystemSettings settings={settings!} />} />
+            <Route path="audit" element={<AuditLogs />} />
+          </Route>
+          <Route path="/" element={<Navigate to="/desktop" replace />} />
+          <Route path="*" element={<Navigate to="/desktop" replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;

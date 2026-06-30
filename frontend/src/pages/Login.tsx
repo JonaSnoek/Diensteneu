@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { api, resolveUrl } from '../utils/api';
 import { LogIn, HelpCircle } from 'lucide-react';
 import type { UserType, SystemSettingsType } from '../App';
+import Logo from '../components/Logo';
 
 type LoginProps = {
   onLoginSuccess: (user: UserType, token: string) => void;
@@ -20,23 +21,17 @@ function Login({ onLoginSuccess, settings }: LoginProps) {
       setError('Bitte geben Sie Benutzername und Passwort ein.');
       return;
     }
-
     setLoading(true);
     setError('');
 
     try {
       const data = await api.post('/auth/login', { username, password });
-      
       const userPayload: UserType = {
         authenticated: true,
         username: data.username,
-        display_name: data.display_name,
-        email: null,
-        role: data.role,
-        is_ldap: false, // Updated by server fetch
-        ldap_dn: null
+        display_name: data.display_name, email: null,
+        role: data.role, is_ldap: false, ldap_dn: null
       };
-      
       onLoginSuccess(userPayload, data.access_token);
     } catch (err: any) {
       setError(err.message || 'Login fehlgeschlagen. Überprüfen Sie Ihre Daten.');
@@ -46,99 +41,47 @@ function Login({ onLoginSuccess, settings }: LoginProps) {
   };
 
   return (
-    <div className="auth-container">
-      <div className="bg-glow primary"></div>
-      <div className="bg-glow accent"></div>
-
-      <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '420px', padding: '40px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '35px' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+      <div style={{ width: '100%', maxWidth: '400px', padding: '40px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           {settings?.logo_url ? (
-            <img 
-              src={resolveUrl(settings.logo_url)} 
-              alt="Logo" 
-              style={{ maxHeight: '60px', marginBottom: '16px' }} 
-            />
+            <img src={resolveUrl(settings.logo_url)} alt="Logo" style={{ maxHeight: '48px', marginBottom: '16px' }} />
           ) : (
-            <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, var(--primary-color), var(--accent-color))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 16px auto',
-              boxShadow: 'var(--shadow-neon)'
-            }}>
-              <LogIn size={26} color="white" />
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+              <Logo size={48} showText={false} />
             </div>
           )}
-          
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '6px' }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '6px' }}>
             {settings?.portal_name || 'Service Portal'}
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
             Melden Sie sich an, um fortzufahren.
           </p>
         </div>
 
         {error && (
-          <div className="badge badge-danger" style={{ display: 'block', width: '100%', padding: '10px 14px', marginBottom: '20px', textAlign: 'center', borderRadius: '6px', textTransform: 'none' }}>
+          <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '16px', textAlign: 'center' }}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">BENUTZERNAME</label>
-            <input 
-              type="text" 
-              className="form-input" 
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              placeholder="Username oder LDAP-UID"
-              required
-              disabled={loading}
-            />
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: '0.75rem' }}>BENUTZERNAME</label>
+            <input type="text" className="form-input" value={username} onChange={e => setUsername(e.target.value)} placeholder="Benutzername oder LDAP-UID" required disabled={loading} />
           </div>
-
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">PASSWORT</label>
-            <input 
-              type="password" 
-              className="form-input" 
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="Passwort"
-              required
-              disabled={loading}
-            />
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: '0.75rem' }}>PASSWORT</label>
+            <input type="password" className="form-input" value={password} onChange={e => setPassword(e.target.value)} placeholder="Passwort" required disabled={loading} />
           </div>
-
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
-            style={{ width: '100%', padding: '12px', marginTop: '10px' }}
-            disabled={loading}
-          >
+          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '12px', marginTop: '6px' }} disabled={loading}>
             {loading ? 'Anmeldung...' : 'Einloggen'}
           </button>
         </form>
 
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          marginTop: '25px',
-          padding: '12px',
-          borderRadius: '8px',
-          background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid var(--border-color)',
-          fontSize: '0.78rem',
-          color: 'var(--text-secondary)'
-        }}>
-          <HelpCircle size={16} color="var(--primary-color)" style={{ flexShrink: 0 }} />
-          <span>Unterstützt lokale Konten sowie die zentrale LDAP/Active-Directory Authentifizierung.</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '24px', padding: '12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+          <HelpCircle size={16} style={{ flexShrink: 0, color: 'var(--primary)' }} />
+          <span>Unterstützt lokale Konten sowie LDAP/AD-Anbindung.</span>
         </div>
       </div>
     </div>
