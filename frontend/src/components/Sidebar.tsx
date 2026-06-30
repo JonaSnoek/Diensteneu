@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Shield,
-  ChevronDown, LogOut, X, PanelLeft,
+  ChevronDown, LogOut, X,
 } from 'lucide-react';
 import { useState } from 'react';
 import Logo from './Logo';
