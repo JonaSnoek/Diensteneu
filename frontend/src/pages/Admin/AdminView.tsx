@@ -1,11 +1,9 @@
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { Users, Cpu, LayoutGrid, FolderCode, Settings, ShieldAlert, ChevronLeft } from 'lucide-react';
-import type { UserType, SystemSettingsType } from '../../App';
+import type { UserType } from '../../App';
 
 type AdminViewProps = {
   user: UserType;
-  settings: SystemSettingsType;
-  onNavigate: (page: 'setup' | 'login' | 'dashboard' | 'admin') => void;
 };
 
 const adminTabs = [
@@ -17,11 +15,9 @@ const adminTabs = [
   { id: '/admin/audit', label: 'Audit-Logs', icon: ShieldAlert },
 ];
 
-function AdminView({ user, onNavigate }: AdminViewProps) {
+function AdminView(_props: AdminViewProps) {
   const location = useLocation();
   const navigate = useNavigate();
-
-  const activeTab = adminTabs.find(t => location.pathname === t.id);
 
   return (
     <div>

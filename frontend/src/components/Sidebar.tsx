@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Monitor, Server, Cloud, Activity, BookOpen, Shield,
-  ChevronDown, LogOut, Settings, Wifi, HardDrive, Cpu, Users,
+  LayoutDashboard, Server, Cloud, Activity, BookOpen, Shield,
+  ChevronDown, LogOut, Wifi,
 } from 'lucide-react';
 import { useState } from 'react';
 import Logo from './Logo';

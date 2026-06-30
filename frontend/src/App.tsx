@@ -50,7 +50,6 @@ function hexToRgb(hex: string): string {
 }
 
 function App() {
-  const [ready, setReady] = useState(false);
   const [page, setPage] = useState<'loading' | 'setup' | 'login' | 'app'>('loading');
   const [user, setUser] = useState<UserType | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -146,15 +145,15 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<Layout user={user} onLogout={handleLogout} />}>
-          <Route path="/desktop" element={<Dashboard user={user} settings={settings!} onNavigate={(p) => { if (p === 'admin') setPage('app'); }} />} />
-          <Route path="/desktop/:category" element={<Dashboard user={user} settings={settings!} onNavigate={(p) => { if (p === 'admin') setPage('app'); }} />} />
+          <Route element={<Layout user={user} onLogout={handleLogout} />}>
+            <Route path="/desktop" element={<Dashboard settings={settings!} />} />
+            <Route path="/desktop/:category" element={<Dashboard settings={settings!} />} />
           <Route path="/netzwerk" element={<NetworkView />} />
           <Route path="/server" element={<ServerView />} />
           <Route path="/virtualisierung" element={<VirtualizationView />} />
           <Route path="/monitoring" element={<MonitoringView />} />
           <Route path="/dokumentation" element={<DocumentationView />} />
-          <Route path="/admin" element={<AdminView user={user} settings={settings!} onNavigate={() => {}} />}>
+          <Route path="/admin" element={<AdminView user={user} />}>
             <Route index element={<Navigate to="/admin/users" replace />} />
             <Route path="users" element={<UserManagement currentUser={user} />} />
             <Route path="ldap" element={<LdapSettings />} />

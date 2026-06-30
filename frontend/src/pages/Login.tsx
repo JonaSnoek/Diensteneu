@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api, resolveUrl } from '../utils/api';
-import { LogIn, HelpCircle } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 import type { UserType, SystemSettingsType } from '../App';
 import Logo from '../components/Logo';
 

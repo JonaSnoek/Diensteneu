@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { api, resolveUrl } from '../utils/api';
 import { getIconComponent } from '../utils/icons';
-import { Search, Star, ExternalLink, LayoutGrid, Heart, X, Maximize2 } from 'lucide-react';
+import { Search, Star, ExternalLink, LayoutGrid, X, Maximize2 } from 'lucide-react';
 import type { UserType, SystemSettingsType } from '../App';
 
 type LauncherType = {
@@ -22,10 +22,9 @@ type LauncherType = {
 type DashboardProps = {
   user: UserType;
   settings: SystemSettingsType;
-  onNavigate: (page: 'setup' | 'login' | 'dashboard' | 'admin') => void;
 };
 
-function Dashboard({ user, settings }: DashboardProps) {
+function Dashboard({ settings }: DashboardProps) {
   const { category: routeCategory } = useParams();
   const [launchers, setLaunchers] = useState<LauncherType[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
