@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api, resolveUrl } from '../utils/api';
 import { getIconComponent } from '../utils/icons';
 import {
-  Search, ExternalLink, LayoutGrid, X, Maximize2,
+  Search, ExternalLink, LayoutGrid, X,
   ChevronRight, Settings, Users, Cpu, FolderCode,
   ShieldAlert,
 } from 'lucide-react';
@@ -232,7 +232,6 @@ const adminItems = [
 ];
 
 function Dashboard() {
-  const navigate = useNavigate();
   const [launchers, setLaunchers] = useState<LauncherType[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
