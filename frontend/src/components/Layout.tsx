@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
-import Sidebar from './Sidebar';
-import { PanelLeft } from 'lucide-react';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
+import Logo from './Logo';
 import type { UserType } from '../App';
 
 type LayoutProps = {
@@ -10,55 +9,45 @@ type LayoutProps = {
 };
 
 function Layout({ user, onLogout }: LayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    setSidebarOpen(!mq.matches);
-    const handler = (e: MediaQueryListEvent) => setSidebarOpen(!e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
+  const navigate = useNavigate();
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
-      <Sidebar
-        user={user}
-        onLogout={onLogout}
-        collapsed={!sidebarOpen}
-        onToggle={() => setSidebarOpen(o => !o)}
-      />
-      {!sidebarOpen && (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg)' }}>
+      <header style={{
+        display: 'flex', alignItems: 'center', gap: '12px',
+        padding: '0 28px', height: '52px',
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--bg-surface)',
+        position: 'sticky', top: 0, zIndex: 50,
+      }}>
         <button
-          onClick={() => setSidebarOpen(true)}
-          className="btn-ghost"
+          onClick={() => navigate('/desktop')}
           style={{
-            position: 'fixed', top: '12px', left: '12px', zIndex: 50,
-            padding: '8px', borderRadius: '8px',
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', gap: '8px',
+            background: 'none', border: 'none', color: 'var(--text)',
+            cursor: 'pointer', fontFamily: 'var(--font)',
+            fontSize: '0.9rem', fontWeight: 700, padding: '4px 0',
           }}
         >
-          <PanelLeft size={18} />
+          <Logo size={22} showText={false} />
+          Services
         </button>
-      )}
-      <div style={{
-        flex: 1,
-        marginLeft: sidebarOpen ? 'var(--sidebar-width)' : 0,
-        transition: 'margin-left 0.2s ease',
-        minWidth: 0,
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
-        <main style={{
-          flex: 1,
-          padding: '28px 32px',
-          maxWidth: '1400px',
-          width: '100%',
-        }}>
-          <Outlet />
-        </main>
-      </div>
+
+        <div style={{ flex: 1 }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+          <span>{user.display_name}</span>
+          <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.3px', color: 'var(--primary)' }}>{user.role}</span>
+        </div>
+
+        <button onClick={onLogout} className="btn-ghost" style={{ padding: '6px', borderRadius: '6px' }}>
+          <LogOut size={15} />
+        </button>
+      </header>
+
+      <main style={{ flex: 1, padding: '32px', maxWidth: '1100px', width: '100%', margin: '0 auto' }}>
+        <Outlet />
+      </main>
     </div>
   );
 }

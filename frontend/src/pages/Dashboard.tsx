@@ -39,11 +39,10 @@ type CategoryNodeProps = {
   icon: React.ReactNode;
   count: number;
   children: React.ReactNode;
-  defaultOpen?: boolean;
 };
 
-function CategoryNode({ label, color, icon, count, children, defaultOpen }: CategoryNodeProps) {
-  const [open, setOpen] = useState(defaultOpen || false);
+function CategoryNode({ label, color, icon, count, children }: CategoryNodeProps) {
+  const [open, setOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -52,17 +51,17 @@ function CategoryNode({ label, color, icon, count, children, defaultOpen }: Cate
       border: '1px solid var(--border)',
       borderRadius: '14px',
       overflow: 'hidden',
-      transition: 'box-shadow 0.25s',
+      transition: 'box-shadow 0.3s, border-color 0.3s',
     }}>
       <button
         onClick={() => setOpen(o => !o)}
         style={{
           display: 'flex', alignItems: 'center', gap: '14px',
-          width: '100%', padding: '20px 24px',
+          width: '100%', padding: '22px 24px',
           background: 'transparent', border: 'none',
           color: 'var(--text)', cursor: 'pointer',
           fontFamily: 'var(--font)',
-          transition: 'background 0.15s',
+          transition: 'background 0.2s',
         }}
         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -72,10 +71,15 @@ function CategoryNode({ label, color, icon, count, children, defaultOpen }: Cate
           background: `${color}14`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: color, flexShrink: 0,
-          transition: 'transform 0.3s',
-          transform: open ? 'scale(1.05)' : 'scale(1)',
+          transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          transform: open ? 'rotate(8deg) scale(1.1)' : 'rotate(0deg) scale(1)',
         }}>
-          {icon}
+          <div style={{
+            transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            transform: open ? 'rotate(-8deg)' : 'rotate(0deg)',
+          }}>
+            {icon}
+          </div>
         </div>
         <div style={{ flex: 1, textAlign: 'left' }}>
           <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '2px' }}>{label}</div>
@@ -87,7 +91,7 @@ function CategoryNode({ label, color, icon, count, children, defaultOpen }: Cate
           size={18}
           style={{
             color: 'var(--text-muted)',
-            transition: 'transform 0.3s ease',
+            transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
             transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
             flexShrink: 0,
           }}
@@ -96,10 +100,10 @@ function CategoryNode({ label, color, icon, count, children, defaultOpen }: Cate
       <div style={{
         display: 'grid',
         gridTemplateRows: open ? '1fr' : '0fr',
-        transition: 'grid-template-rows 0.35s ease',
+        transition: 'grid-template-rows 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
       }}>
         <div style={{ overflow: 'hidden' }}>
-          <div ref={contentRef} style={{ padding: open ? '0 24px 20px' : '0 24px' }}>
+          <div ref={contentRef} style={{ padding: open ? '0 24px 22px' : '0 24px' }}>
             <div style={{
               borderTop: '1px solid var(--border)',
               paddingTop: '16px',
@@ -118,49 +122,102 @@ type ItemCardProps = {
   description?: string | null;
   icon: string;
   color: string;
+  index: number;
   onClick: () => void;
 };
 
-function ItemCard({ title, description, icon, color, onClick }: ItemCardProps) {
+function ItemCard({ title, description, icon, color, index, onClick }: ItemCardProps) {
   const IconComp = getIconComponent(icon);
   return (
     <button
       onClick={onClick}
       style={{
         display: 'flex', alignItems: 'center', gap: '12px',
-        width: '100%', padding: '12px 14px',
+        width: '100%', padding: '13px 16px',
         background: 'transparent', border: '1px solid var(--border)',
         borderRadius: '10px', color: 'var(--text)',
         cursor: 'pointer', fontFamily: 'var(--font)',
-        transition: 'all 0.15s',
+        transition: 'all 0.2s ease',
         textAlign: 'left',
+        animation: `slideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) ${index * 0.06}s both`,
       }}
       onMouseEnter={e => {
         e.currentTarget.style.background = `${color}08`;
         e.currentTarget.style.borderColor = `${color}30`;
+        e.currentTarget.style.transform = 'translateX(4px)';
       }}
       onMouseLeave={e => {
         e.currentTarget.style.background = 'transparent';
         e.currentTarget.style.borderColor = 'var(--border)';
+        e.currentTarget.style.transform = 'translateX(0)';
       }}
     >
       <div style={{
-        width: '34px', height: '34px', borderRadius: '9px',
+        width: '36px', height: '36px', borderRadius: '9px',
         background: `${color}12`, display: 'flex',
         alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         color: color,
       }}>
-        <IconComp size={16} />
+        <IconComp size={17} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 500, fontSize: '0.88rem' }}>{title}</div>
         {description && (
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {description}
           </div>
         )}
       </div>
       <ExternalLink size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+    </button>
+  );
+}
+
+type AdminItemCardProps = {
+  label: string;
+  icon: React.ComponentType<any>;
+  path: string;
+  index: number;
+};
+
+function AdminItemCard({ label, icon: ItemIcon, path, index }: AdminItemCardProps) {
+  const navigate = useNavigate();
+  return (
+    <button
+      onClick={() => navigate(path)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '12px',
+        width: '100%', padding: '13px 16px',
+        background: 'transparent', border: '1px solid var(--border)',
+        borderRadius: '10px', color: 'var(--text)',
+        cursor: 'pointer', fontFamily: 'var(--font)',
+        transition: 'all 0.2s ease',
+        textAlign: 'left',
+        animation: `slideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) ${index * 0.06}s both`,
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = `${palette[0]}08`;
+        e.currentTarget.style.borderColor = `${palette[0]}30`;
+        e.currentTarget.style.transform = 'translateX(4px)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = 'transparent';
+        e.currentTarget.style.borderColor = 'var(--border)';
+        e.currentTarget.style.transform = 'translateX(0)';
+      }}
+    >
+      <div style={{
+        width: '36px', height: '36px', borderRadius: '9px',
+        background: `${palette[0]}12`, display: 'flex',
+        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        color: palette[0],
+      }}>
+        <ItemIcon size={17} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 500, fontSize: '0.88rem' }}>{label}</div>
+      </div>
+      <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
     </button>
   );
 }
@@ -225,7 +282,7 @@ function Dashboard() {
   const totalItems = launchers.length + adminItems.length;
 
   return (
-    <div>
+    <div style={{ animation: 'fadeIn 0.3s ease' }}>
       <div style={{ marginBottom: '36px' }}>
         <h1 style={{ fontSize: '1.6rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '6px' }}>
           Übersicht
@@ -235,10 +292,7 @@ function Dashboard() {
         </p>
       </div>
 
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '12px',
-        marginBottom: '32px', flexWrap: 'wrap',
-      }}>
+      <div style={{ marginBottom: '32px' }}>
         <div className="search-wrap" style={{ width: '280px' }}>
           <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
           <input
@@ -261,7 +315,7 @@ function Dashboard() {
           <div className="spinner" />
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {filteredEntries.map(([cat, items]) => {
             const color = hashColor(cat);
             const IconComp = getIconComponent(items[0]?.icon || 'folder');
@@ -275,15 +329,15 @@ function Dashboard() {
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {items.map((item, i) => (
-                      <div key={item.id} style={{ animation: `fadeIn 0.2s ease ${i * 0.04}s both` }}>
-                        <ItemCard
-                          title={item.title}
-                          description={item.description}
-                          icon={item.icon}
-                          color={color}
-                          onClick={() => openTool(item)}
-                        />
-                      </div>
+                      <ItemCard
+                        key={item.id}
+                        title={item.title}
+                        description={item.description}
+                        icon={item.icon}
+                        color={color}
+                        index={i}
+                        onClick={() => openTool(item)}
+                      />
                     ))}
                   </div>
                 </CategoryNode>
@@ -291,7 +345,7 @@ function Dashboard() {
             );
           })}
 
-          <div className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
+          <div className="animate-fade-in">
             <CategoryNode
               label="Administration"
               color={palette[0]}
@@ -299,45 +353,15 @@ function Dashboard() {
               count={adminItems.length}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {adminItems.map((item, i) => {
-                  const ItemIcon = item.icon;
-                  return (
-                    <div key={item.path} style={{ animation: `fadeIn 0.2s ease ${i * 0.04}s both` }}>
-                      <button
-                        onClick={() => navigate(item.path)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '12px',
-                          width: '100%', padding: '12px 14px',
-                          background: 'transparent', border: '1px solid var(--border)',
-                          borderRadius: '10px', color: 'var(--text)',
-                          cursor: 'pointer', fontFamily: 'var(--font)',
-                          transition: 'all 0.15s', textAlign: 'left',
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.background = `${palette[0]}08`;
-                          e.currentTarget.style.borderColor = `${palette[0]}30`;
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.borderColor = 'var(--border)';
-                        }}
-                      >
-                        <div style={{
-                          width: '34px', height: '34px', borderRadius: '9px',
-                          background: `${palette[0]}12`, display: 'flex',
-                          alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                          color: palette[0],
-                        }}>
-                          <ItemIcon size={16} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 500, fontSize: '0.88rem' }}>{item.label}</div>
-                        </div>
-                        <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                      </button>
-                    </div>
-                  );
-                })}
+                {adminItems.map((item, i) => (
+                  <AdminItemCard
+                    key={item.path}
+                    label={item.label}
+                    icon={item.icon}
+                    path={item.path}
+                    index={i}
+                  />
+                ))}
               </div>
             </CategoryNode>
           </div>
@@ -349,6 +373,7 @@ function Dashboard() {
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000,
           background: 'rgba(0,0,0,0.75)', display: 'flex', flexDirection: 'column',
           backdropFilter: 'blur(4px)',
+          animation: 'fadeIn 0.15s ease',
         }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '12px',
@@ -362,9 +387,6 @@ function Dashboard() {
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
               <button onClick={() => window.open(activeTool.target_url, '_blank')} className="btn-ghost" style={{ padding: '4px' }}>
                 <ExternalLink size={16} />
-              </button>
-              <button onClick={() => {}} className="btn-ghost" style={{ padding: '4px' }}>
-                <Maximize2 size={16} />
               </button>
             </div>
           </div>
