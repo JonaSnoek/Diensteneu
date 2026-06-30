@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import { PanelLeft } from 'lucide-react';
 import type { UserType } from '../App';
 
 type LayoutProps = {
@@ -21,30 +22,40 @@ function Layout({ user, onLogout }: LayoutProps) {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
-      <Sidebar user={user} onLogout={onLogout} collapsed={!sidebarOpen} onToggle={() => setSidebarOpen(o => !o)} />
+      <Sidebar
+        user={user}
+        onLogout={onLogout}
+        collapsed={!sidebarOpen}
+        onToggle={() => setSidebarOpen(o => !o)}
+      />
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="btn-ghost"
+          style={{
+            position: 'fixed', top: '12px', left: '12px', zIndex: 50,
+            padding: '8px', borderRadius: '8px',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <PanelLeft size={18} />
+        </button>
+      )}
       <div style={{
         flex: 1,
         marginLeft: sidebarOpen ? 'var(--sidebar-width)' : 0,
-        transition: 'margin-left 0.25s ease',
+        transition: 'margin-left 0.2s ease',
         minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
       }}>
-        <header style={{
-          display: 'flex', alignItems: 'center', gap: '12px',
-          padding: '12px 20px', borderBottom: '1px solid var(--border)',
-          background: 'var(--bg-surface)',
-          position: 'sticky', top: 0, zIndex: 50,
+        <main style={{
+          flex: 1,
+          padding: '28px 32px',
+          maxWidth: '1400px',
+          width: '100%',
         }}>
-          <button className="btn-ghost" onClick={() => setSidebarOpen(o => !o)} style={{ padding: '6px' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-        </header>
-        <main style={{ flex: 1, padding: '24px 28px', maxWidth: '1400px', width: '100%' }}>
           <Outlet />
         </main>
       </div>

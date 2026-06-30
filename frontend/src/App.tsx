@@ -5,7 +5,6 @@ import Layout from './components/Layout';
 import Setup from './pages/Setup';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import DocumentationView from './pages/DocumentationView';
 import AdminView from './pages/Admin/AdminView';
 import UserManagement from './pages/Admin/UserManagement';
 import LdapSettings from './pages/Admin/LdapSettings';
@@ -144,7 +143,6 @@ function App() {
           <Route element={<Layout user={user} onLogout={handleLogout} />}>
             <Route path="/desktop" element={<Dashboard />} />
             <Route path="/desktop/:category" element={<Dashboard />} />
-          <Route path="/dokumentation" element={<DocumentationView />} />
           <Route path="/admin" element={<AdminView user={user} />}>
             <Route index element={<Navigate to="/admin/users" replace />} />
             <Route path="users" element={<UserManagement currentUser={user} />} />

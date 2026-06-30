@@ -22,6 +22,17 @@ type DashboardProps = {
   _dummy?: never;
 };
 
+const palette = [
+  '#3b82f6', '#06b6d4', '#10b981', '#f59e0b',
+  '#f97316', '#8b5cf6', '#ec4899', '#14b8a6',
+];
+
+function hashColor(s: string): string {
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) hash = s.charCodeAt(i) + ((hash << 5) - hash);
+  return palette[Math.abs(hash) % palette.length];
+}
+
 function Dashboard(_props: DashboardProps) {
   const { category: routeCategory } = useParams();
   const [launchers, setLaunchers] = useState<LauncherType[]>([]);
@@ -49,18 +60,12 @@ function Dashboard(_props: DashboardProps) {
     }
   };
 
-  useEffect(() => {
-    fetchLaunchers();
-  }, []);
+  useEffect(() => { fetchLaunchers(); }, []);
 
   const toggleFavorite = async (e: React.MouseEvent, launcher: LauncherType) => {
     e.stopPropagation();
     try {
-      if (launcher.is_favorite) {
-        await api.post(`/launchers/${launcher.id}/favorite`);
-      } else {
-        await api.post(`/launchers/${launcher.id}/favorite`);
-      }
+      await api.post(`/launchers/${launcher.id}/favorite`);
       setLaunchers(prev => prev.map(l =>
         l.id === launcher.id ? { ...l, is_favorite: !l.is_favorite } : l
       ));
@@ -111,16 +116,11 @@ function Dashboard(_props: DashboardProps) {
       </div>
 
       <div className="category-filters">
-        <button
-          className={`cat-btn ${selectedCategory === 'All' ? 'cat-btn-active' : ''}`}
-        >
+        <button className={`cat-btn ${selectedCategory === 'All' ? 'cat-btn-active' : ''}`}>
           Alle
         </button>
         {categories.map(cat => (
-          <button
-            key={cat}
-            className={`cat-btn ${selectedCategory === cat ? 'cat-btn-active' : ''}`}
-          >
+          <button key={cat} className={`cat-btn ${selectedCategory === cat ? 'cat-btn-active' : ''}`}>
             {cat}
           </button>
         ))}
@@ -140,49 +140,68 @@ function Dashboard(_props: DashboardProps) {
           <p>Keine Kacheln gefunden.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
-          {filteredLaunchers.map(launcher => {
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '14px' }}>
+          {filteredLaunchers.map((launcher, idx) => {
             const IconComp = getIconComponent(launcher.icon);
+            const color = launcher.design_color || hashColor(launcher.category);
             return (
               <div
                 key={launcher.id}
                 className="card"
-                style={{ padding: '20px', cursor: 'pointer', position: 'relative' }}
                 onClick={() => openTool(launcher)}
+                style={{
+                  cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                  padding: '0',
+                  animation: `fadeIn 0.25s ease ${idx * 0.03}s both`,
+                }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '10px',
-                    background: launcher.design_color ? `${launcher.design_color}20` : 'var(--bg-elevated)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                    color: launcher.design_color || 'var(--primary)',
-                  }}>
-                    <IconComp size={20} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '4px' }}>
-                      {launcher.title}
+                <div style={{
+                  height: '3px',
+                  background: `linear-gradient(90deg, ${color}, ${color}88)`,
+                  width: '100%',
+                }} />
+                <div style={{ padding: '18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <div style={{
+                      width: '38px', height: '38px', borderRadius: '10px',
+                      background: `${color}18`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      color: color,
+                    }}>
+                      <IconComp size={19} />
                     </div>
-                    {launcher.description && (
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                        {launcher.description}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '3px' }}>
+                        {launcher.title}
                       </div>
+                      {launcher.description && (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {launcher.description}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={e => toggleFavorite(e, launcher)}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: launcher.is_favorite ? color : 'var(--text-muted)',
+                        padding: '4px', flexShrink: 0, marginTop: '-2px',
+                      }}
+                    >
+                      <Star size={13} fill={launcher.is_favorite ? color : 'none'} />
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
+                    <span style={{
+                      fontSize: '0.68rem', fontWeight: 500, padding: '2px 8px',
+                      borderRadius: '4px', background: `${color}12`, color: color,
+                    }}>
+                      {launcher.category}
+                    </span>
+                    {launcher.target_type === 'external_url' && (
+                      <ExternalLink size={11} style={{ color: 'var(--text-muted)' }} />
                     )}
                   </div>
-                  <button
-                    onClick={e => toggleFavorite(e, launcher)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: launcher.is_favorite ? 'var(--primary)' : 'var(--text-muted)', padding: '4px', flexShrink: 0 }}
-                  >
-                    <Star size={14} fill={launcher.is_favorite ? 'var(--primary)' : 'none'} />
-                  </button>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
-                  <span className="badge badge-primary" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
-                    {launcher.category}
-                  </span>
-                  {launcher.target_type === 'external_url' && (
-                    <ExternalLink size={12} style={{ color: 'var(--text-muted)' }} />
-                  )}
                 </div>
               </div>
             );
@@ -196,22 +215,18 @@ function Dashboard(_props: DashboardProps) {
           background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}>
-            <button onClick={() => setActiveTool(null)} style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: '4px' }}>
+            <button onClick={() => setActiveTool(null)} className="btn-ghost" style={{ padding: '4px' }}>
               <X size={20} />
             </button>
-            <span style={{ fontWeight: 600 }}>{activeTool.title}</span>
-            <button
-              onClick={() => window.open(activeTool.target_url, '_blank')}
-              style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '4px' }}
-            >
-              <ExternalLink size={16} />
-            </button>
-            <button
-              onClick={() => setActiveTool(null)}
-              style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '4px' }}
-            >
-              <Maximize2 size={16} />
-            </button>
+            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{activeTool.title}</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+              <button onClick={() => window.open(activeTool.target_url, '_blank')} className="btn-ghost" style={{ padding: '4px' }}>
+                <ExternalLink size={16} />
+              </button>
+              <button onClick={() => setActiveTool(null)} className="btn-ghost" style={{ padding: '4px' }}>
+                <Maximize2 size={16} />
+              </button>
+            </div>
           </div>
           <iframe
             src={resolveUrl(activeTool.target_url)}
