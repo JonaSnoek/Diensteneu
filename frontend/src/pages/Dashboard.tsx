@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api, resolveUrl } from '../utils/api';
 import { getIconComponent } from '../utils/icons';
 import {
   Search, ExternalLink, LayoutGrid, X, Maximize2,
   ChevronRight, Settings, Users, Cpu, FolderCode,
-  ShieldAlert, LayoutDashboard,
+  ShieldAlert,
 } from 'lucide-react';
 
 type LauncherType = {
@@ -45,13 +45,6 @@ type CategoryNodeProps = {
 function CategoryNode({ label, color, icon, count, children, defaultOpen }: CategoryNodeProps) {
   const [open, setOpen] = useState(defaultOpen || false);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [contentHeight, setContentHeight] = useState(0);
-
-  useEffect(() => {
-    if (contentRef.current) {
-      setContentHeight(contentRef.current.scrollHeight);
-    }
-  }, [children]);
 
   return (
     <div style={{
@@ -183,7 +176,6 @@ const adminItems = [
 
 function Dashboard() {
   const navigate = useNavigate();
-  const { category: routeCategory } = useParams();
   const [launchers, setLaunchers] = useState<LauncherType[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
