@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, resolveUrl } from '../utils/api';
 import { getIconComponent } from '../utils/icons';
+import type { UserType } from '../App';
 import {
   Search, ExternalLink, LayoutGrid, X,
   ChevronRight, Settings, Users, Cpu, FolderCode,
@@ -222,16 +223,22 @@ function AdminItemCard({ label, icon: ItemIcon, path, index }: AdminItemCardProp
   );
 }
 
+const roleLevel: Record<string, number> = {
+  Guest: 0, User: 1, Creator: 2, Admin: 3, Root: 4,
+};
+
 const adminItems = [
-  { label: 'Benutzer', icon: Users, path: '/admin/users' },
-  { label: 'LDAP / AD', icon: Cpu, path: '/admin/ldap' },
-  { label: 'Kacheln (Tiles)', icon: LayoutGrid, path: '/admin/launchers' },
-  { label: 'HTML-Module', icon: FolderCode, path: '/admin/modules' },
-  { label: 'Einstellungen', icon: Settings, path: '/admin/system' },
-  { label: 'Audit-Logs', icon: ShieldAlert, path: '/admin/audit' },
+  { label: 'Benutzer', icon: Users, path: '/admin/users', minRole: 'Admin' },
+  { label: 'LDAP / AD', icon: Cpu, path: '/admin/ldap', minRole: 'Admin' },
+  { label: 'Kacheln (Tiles)', icon: LayoutGrid, path: '/admin/launchers', minRole: 'Creator' },
+  { label: 'HTML-Module', icon: FolderCode, path: '/admin/modules', minRole: 'Creator' },
+  { label: 'Einstellungen', icon: Settings, path: '/admin/system', minRole: 'Admin' },
+  { label: 'Audit-Logs', icon: ShieldAlert, path: '/admin/audit', minRole: 'Admin' },
 ];
 
-function Dashboard() {
+function Dashboard({ user }: { user: UserType }) {
+  const userLevel = roleLevel[user.role] ?? 0;
+  const visibleAdminItems = adminItems.filter(item => userLevel >= roleLevel[item.minRole]);
   const [launchers, setLaunchers] = useState<LauncherType[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -278,7 +285,9 @@ function Dashboard() {
     }
   };
 
-  const totalItems = launchers.length + adminItems.length;
+  const totalItems = launchers.length + visibleAdminItems.length;
+
+  const hasAdminAccess = visibleAdminItems.length > 0;
 
   return (
     <div style={{ animation: 'fadeIn 0.3s ease' }}>
@@ -344,26 +353,28 @@ function Dashboard() {
             );
           })}
 
-          <div className="animate-fade-in">
-            <CategoryNode
-              label="Administration"
-              color={palette[0]}
-              icon={<Settings size={20} />}
-              count={adminItems.length}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {adminItems.map((item, i) => (
-                  <AdminItemCard
-                    key={item.path}
-                    label={item.label}
-                    icon={item.icon}
-                    path={item.path}
-                    index={i}
-                  />
-                ))}
-              </div>
-            </CategoryNode>
-          </div>
+          {hasAdminAccess && (
+            <div className="animate-fade-in">
+              <CategoryNode
+                label="Administration"
+                color={palette[0]}
+                icon={<Settings size={20} />}
+                count={visibleAdminItems.length}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {visibleAdminItems.map((item, i) => (
+                    <AdminItemCard
+                      key={item.path}
+                      label={item.label}
+                      icon={item.icon}
+                      path={item.path}
+                      index={i}
+                    />
+                  ))}
+                </div>
+              </CategoryNode>
+            </div>
+          )}
         </div>
       )}
 

@@ -141,8 +141,8 @@ function App() {
     <BrowserRouter>
       <Routes>
           <Route element={<Layout user={user} onLogout={handleLogout} />}>
-            <Route path="/desktop" element={<Dashboard />} />
-            <Route path="/desktop/:category" element={<Dashboard />} />
+            <Route path="/desktop" element={<Dashboard user={user} />} />
+            <Route path="/desktop/:category" element={<Dashboard user={user} />} />
           <Route path="/admin" element={<AdminView user={user} />}>
             <Route index element={<Navigate to="/admin/users" replace />} />
             <Route path="users" element={<UserManagement currentUser={user} />} />
