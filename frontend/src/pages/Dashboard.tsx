@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api, resolveUrl } from '../utils/api';
 import { getIconComponent } from '../utils/icons';
-import { Search, Star, ExternalLink, LayoutGrid, X, Maximize2 } from 'lucide-react';
+import {
+  Search, ExternalLink, LayoutGrid, X, Maximize2,
+  ChevronRight, Settings, Users, Cpu, FolderCode,
+  ShieldAlert, LayoutDashboard,
+} from 'lucide-react';
 
 type LauncherType = {
   id: number;
@@ -18,10 +22,6 @@ type LauncherType = {
   is_favorite: boolean;
 };
 
-type DashboardProps = {
-  _dummy?: never;
-};
-
 const palette = [
   '#3b82f6', '#06b6d4', '#10b981', '#f59e0b',
   '#f97316', '#8b5cf6', '#ec4899', '#14b8a6',
@@ -33,28 +33,170 @@ function hashColor(s: string): string {
   return palette[Math.abs(hash) % palette.length];
 }
 
-function Dashboard(_props: DashboardProps) {
+type CategoryNodeProps = {
+  label: string;
+  color: string;
+  icon: React.ReactNode;
+  count: number;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+};
+
+function CategoryNode({ label, color, icon, count, children, defaultOpen }: CategoryNodeProps) {
+  const [open, setOpen] = useState(defaultOpen || false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      setContentHeight(contentRef.current.scrollHeight);
+    }
+  }, [children]);
+
+  return (
+    <div style={{
+      background: 'var(--bg-surface)',
+      border: '1px solid var(--border)',
+      borderRadius: '14px',
+      overflow: 'hidden',
+      transition: 'box-shadow 0.25s',
+    }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '14px',
+          width: '100%', padding: '20px 24px',
+          background: 'transparent', border: 'none',
+          color: 'var(--text)', cursor: 'pointer',
+          fontFamily: 'var(--font)',
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >
+        <div style={{
+          width: '44px', height: '44px', borderRadius: '12px',
+          background: `${color}14`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: color, flexShrink: 0,
+          transition: 'transform 0.3s',
+          transform: open ? 'scale(1.05)' : 'scale(1)',
+        }}>
+          {icon}
+        </div>
+        <div style={{ flex: 1, textAlign: 'left' }}>
+          <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '2px' }}>{label}</div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            {count} Einträge
+          </div>
+        </div>
+        <ChevronRight
+          size={18}
+          style={{
+            color: 'var(--text-muted)',
+            transition: 'transform 0.3s ease',
+            transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
+            flexShrink: 0,
+          }}
+        />
+      </button>
+      <div style={{
+        display: 'grid',
+        gridTemplateRows: open ? '1fr' : '0fr',
+        transition: 'grid-template-rows 0.35s ease',
+      }}>
+        <div style={{ overflow: 'hidden' }}>
+          <div ref={contentRef} style={{ padding: open ? '0 24px 20px' : '0 24px' }}>
+            <div style={{
+              borderTop: '1px solid var(--border)',
+              paddingTop: '16px',
+            }}>
+              {children}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type ItemCardProps = {
+  title: string;
+  description?: string | null;
+  icon: string;
+  color: string;
+  onClick: () => void;
+};
+
+function ItemCard({ title, description, icon, color, onClick }: ItemCardProps) {
+  const IconComp = getIconComponent(icon);
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '12px',
+        width: '100%', padding: '12px 14px',
+        background: 'transparent', border: '1px solid var(--border)',
+        borderRadius: '10px', color: 'var(--text)',
+        cursor: 'pointer', fontFamily: 'var(--font)',
+        transition: 'all 0.15s',
+        textAlign: 'left',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = `${color}08`;
+        e.currentTarget.style.borderColor = `${color}30`;
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = 'transparent';
+        e.currentTarget.style.borderColor = 'var(--border)';
+      }}
+    >
+      <div style={{
+        width: '34px', height: '34px', borderRadius: '9px',
+        background: `${color}12`, display: 'flex',
+        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        color: color,
+      }}>
+        <IconComp size={16} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 500, fontSize: '0.88rem' }}>{title}</div>
+        {description && (
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {description}
+          </div>
+        )}
+      </div>
+      <ExternalLink size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+    </button>
+  );
+}
+
+const adminItems = [
+  { label: 'Benutzer', icon: Users, path: '/admin/users' },
+  { label: 'LDAP / AD', icon: Cpu, path: '/admin/ldap' },
+  { label: 'Kacheln (Tiles)', icon: LayoutGrid, path: '/admin/launchers' },
+  { label: 'HTML-Module', icon: FolderCode, path: '/admin/modules' },
+  { label: 'Einstellungen', icon: Settings, path: '/admin/system' },
+  { label: 'Audit-Logs', icon: ShieldAlert, path: '/admin/audit' },
+];
+
+function Dashboard() {
+  const navigate = useNavigate();
   const { category: routeCategory } = useParams();
   const [launchers, setLaunchers] = useState<LauncherType[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTool, setActiveTool] = useState<LauncherType | null>(null);
-
-  const selectedCategory = routeCategory
-    ? routeCategory.charAt(0).toUpperCase() + routeCategory.slice(1)
-    : 'All';
 
   const fetchLaunchers = async () => {
     setLoading(true);
     try {
       const data = await api.get('/launchers/') as LauncherType[];
       setLaunchers(data);
-      const cats = Array.from(new Set(data.map(l => l.category)));
-      setCategories(cats);
     } catch (err: any) {
-      setError(err.message || 'Fehler beim Laden der Portal-Kacheln.');
+      setError(err.message || 'Fehler beim Laden.');
     } finally {
       setLoading(false);
     }
@@ -62,17 +204,23 @@ function Dashboard(_props: DashboardProps) {
 
   useEffect(() => { fetchLaunchers(); }, []);
 
-  const toggleFavorite = async (e: React.MouseEvent, launcher: LauncherType) => {
-    e.stopPropagation();
-    try {
-      await api.post(`/launchers/${launcher.id}/favorite`);
-      setLaunchers(prev => prev.map(l =>
-        l.id === launcher.id ? { ...l, is_favorite: !l.is_favorite } : l
-      ));
-    } catch (err) {
-      console.error('Toggle favorite failed', err);
-    }
-  };
+  const grouped = launchers.reduce<Record<string, LauncherType[]>>((acc, l) => {
+    if (!acc[l.category]) acc[l.category] = [];
+    acc[l.category].push(l);
+    return acc;
+  }, {});
+
+  const filteredEntries = Object.entries(grouped)
+    .map(([cat, items]) => [
+      cat,
+      searchQuery
+        ? items.filter(l =>
+            l.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (l.description && l.description.toLowerCase().includes(searchQuery.toLowerCase()))
+          )
+        : items,
+    ] as [string, LauncherType[]])
+    .filter(([, items]) => items.length > 0);
 
   const openTool = (launcher: LauncherType) => {
     if (launcher.target_type === 'external_url' || launcher.target_type === 'internal_html') {
@@ -82,48 +230,34 @@ function Dashboard(_props: DashboardProps) {
     }
   };
 
-  const filteredLaunchers = launchers.filter(l => {
-    if (selectedCategory !== 'All' && l.category !== selectedCategory) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return l.title.toLowerCase().includes(q) || (l.description && l.description.toLowerCase().includes(q));
-    }
-    return true;
-  });
+  const totalItems = launchers.length + adminItems.length;
 
   return (
     <div>
-      <div className="dashboard-header">
-        <div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 700 }}>
-            {selectedCategory === 'All' ? 'Alle Dienste' : selectedCategory}
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
-            {filteredLaunchers.length} Kacheln
-          </p>
-        </div>
-        <div className="search-wrap">
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+      <div style={{ marginBottom: '36px' }}>
+        <h1 style={{ fontSize: '1.6rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '6px' }}>
+          Übersicht
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+          {totalItems} verfügbare Einträge
+        </p>
+      </div>
+
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '12px',
+        marginBottom: '32px', flexWrap: 'wrap',
+      }}>
+        <div className="search-wrap" style={{ width: '280px' }}>
+          <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
           <input
             type="text"
             className="form-input"
-            placeholder="Suchen..."
+            placeholder="Durchsuchen..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            style={{ paddingLeft: '36px' }}
+            style={{ paddingLeft: '40px', borderRadius: '10px' }}
           />
         </div>
-      </div>
-
-      <div className="category-filters">
-        <button className={`cat-btn ${selectedCategory === 'All' ? 'cat-btn-active' : ''}`}>
-          Alle
-        </button>
-        {categories.map(cat => (
-          <button key={cat} className={`cat-btn ${selectedCategory === cat ? 'cat-btn-active' : ''}`}>
-            {cat}
-          </button>
-        ))}
       </div>
 
       {error && (
@@ -131,90 +265,104 @@ function Dashboard(_props: DashboardProps) {
       )}
 
       {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '64px' }}>
           <div className="spinner" />
         </div>
-      ) : filteredLaunchers.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
-          <LayoutGrid size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-          <p>Keine Kacheln gefunden.</p>
-        </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '14px' }}>
-          {filteredLaunchers.map((launcher, idx) => {
-            const IconComp = getIconComponent(launcher.icon);
-            const color = launcher.design_color || hashColor(launcher.category);
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {filteredEntries.map(([cat, items]) => {
+            const color = hashColor(cat);
+            const IconComp = getIconComponent(items[0]?.icon || 'folder');
             return (
-              <div
-                key={launcher.id}
-                className="card"
-                onClick={() => openTool(launcher)}
-                style={{
-                  cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                  padding: '0',
-                  animation: `fadeIn 0.25s ease ${idx * 0.03}s both`,
-                }}
-              >
-                <div style={{
-                  height: '3px',
-                  background: `linear-gradient(90deg, ${color}, ${color}88)`,
-                  width: '100%',
-                }} />
-                <div style={{ padding: '18px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                    <div style={{
-                      width: '38px', height: '38px', borderRadius: '10px',
-                      background: `${color}18`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                      color: color,
-                    }}>
-                      <IconComp size={19} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '3px' }}>
-                        {launcher.title}
+              <div key={cat} className="animate-fade-in">
+                <CategoryNode
+                  label={cat}
+                  color={color}
+                  icon={<IconComp size={20} />}
+                  count={items.length}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {items.map((item, i) => (
+                      <div key={item.id} style={{ animation: `fadeIn 0.2s ease ${i * 0.04}s both` }}>
+                        <ItemCard
+                          title={item.title}
+                          description={item.description}
+                          icon={item.icon}
+                          color={color}
+                          onClick={() => openTool(item)}
+                        />
                       </div>
-                      {launcher.description && (
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                          {launcher.description}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      onClick={e => toggleFavorite(e, launcher)}
-                      style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: launcher.is_favorite ? color : 'var(--text-muted)',
-                        padding: '4px', flexShrink: 0, marginTop: '-2px',
-                      }}
-                    >
-                      <Star size={13} fill={launcher.is_favorite ? color : 'none'} />
-                    </button>
+                    ))}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
-                    <span style={{
-                      fontSize: '0.68rem', fontWeight: 500, padding: '2px 8px',
-                      borderRadius: '4px', background: `${color}12`, color: color,
-                    }}>
-                      {launcher.category}
-                    </span>
-                    {launcher.target_type === 'external_url' && (
-                      <ExternalLink size={11} style={{ color: 'var(--text-muted)' }} />
-                    )}
-                  </div>
-                </div>
+                </CategoryNode>
               </div>
             );
           })}
+
+          <div className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
+            <CategoryNode
+              label="Administration"
+              color={palette[0]}
+              icon={<Settings size={20} />}
+              count={adminItems.length}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {adminItems.map((item, i) => {
+                  const ItemIcon = item.icon;
+                  return (
+                    <div key={item.path} style={{ animation: `fadeIn 0.2s ease ${i * 0.04}s both` }}>
+                      <button
+                        onClick={() => navigate(item.path)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '12px',
+                          width: '100%', padding: '12px 14px',
+                          background: 'transparent', border: '1px solid var(--border)',
+                          borderRadius: '10px', color: 'var(--text)',
+                          cursor: 'pointer', fontFamily: 'var(--font)',
+                          transition: 'all 0.15s', textAlign: 'left',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = `${palette[0]}08`;
+                          e.currentTarget.style.borderColor = `${palette[0]}30`;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.borderColor = 'var(--border)';
+                        }}
+                      >
+                        <div style={{
+                          width: '34px', height: '34px', borderRadius: '9px',
+                          background: `${palette[0]}12`, display: 'flex',
+                          alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                          color: palette[0],
+                        }}>
+                          <ItemIcon size={16} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 500, fontSize: '0.88rem' }}>{item.label}</div>
+                        </div>
+                        <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CategoryNode>
+          </div>
         </div>
       )}
 
       {activeTool && activeTool.target_type !== 'external_url' && activeTool.target_type !== 'internal_html' && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000,
-          background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column',
+          background: 'rgba(0,0,0,0.75)', display: 'flex', flexDirection: 'column',
+          backdropFilter: 'blur(4px)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '12px',
+            padding: '14px 20px', background: 'var(--bg-surface)',
+            borderBottom: '1px solid var(--border)',
+          }}>
             <button onClick={() => setActiveTool(null)} className="btn-ghost" style={{ padding: '4px' }}>
               <X size={20} />
             </button>
@@ -223,7 +371,7 @@ function Dashboard(_props: DashboardProps) {
               <button onClick={() => window.open(activeTool.target_url, '_blank')} className="btn-ghost" style={{ padding: '4px' }}>
                 <ExternalLink size={16} />
               </button>
-              <button onClick={() => setActiveTool(null)} className="btn-ghost" style={{ padding: '4px' }}>
+              <button onClick={() => {}} className="btn-ghost" style={{ padding: '4px' }}>
                 <Maximize2 size={16} />
               </button>
             </div>
