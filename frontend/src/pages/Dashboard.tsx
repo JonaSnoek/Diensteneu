@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import { api, resolveUrl } from '../utils/api';
 import { getIconComponent } from '../utils/icons';
 import { Search, Star, ExternalLink, LayoutGrid, X, Maximize2 } from 'lucide-react';
-import type { UserType, SystemSettingsType } from '../App';
 
 type LauncherType = {
   id: number;
@@ -20,11 +19,10 @@ type LauncherType = {
 };
 
 type DashboardProps = {
-  user: UserType;
-  settings: SystemSettingsType;
+  _dummy?: never;
 };
 
-function Dashboard({ settings }: DashboardProps) {
+function Dashboard(_props: DashboardProps) {
   const { category: routeCategory } = useParams();
   const [launchers, setLaunchers] = useState<LauncherType[]>([]);
   const [categories, setCategories] = useState<string[]>([]);

@@ -146,8 +146,8 @@ function App() {
     <BrowserRouter>
       <Routes>
           <Route element={<Layout user={user} onLogout={handleLogout} />}>
-            <Route path="/desktop" element={<Dashboard settings={settings!} />} />
-            <Route path="/desktop/:category" element={<Dashboard settings={settings!} />} />
+            <Route path="/desktop" element={<Dashboard />} />
+            <Route path="/desktop/:category" element={<Dashboard />} />
           <Route path="/netzwerk" element={<NetworkView />} />
           <Route path="/server" element={<ServerView />} />
           <Route path="/virtualisierung" element={<VirtualizationView />} />
