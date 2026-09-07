@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 import Logo from './Logo';
 import type { UserType } from '../App';
 
@@ -10,6 +10,7 @@ type LayoutProps = {
 
 function Layout({ user, onLogout }: LayoutProps) {
   const navigate = useNavigate();
+  const isAdmin = user.role === 'Root' || user.role === 'Admin';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg)' }}>
@@ -40,7 +41,13 @@ function Layout({ user, onLogout }: LayoutProps) {
           <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.3px', color: 'var(--primary)' }}>{user.role}</span>
         </div>
 
-        <button onClick={onLogout} className="btn-ghost" style={{ padding: '6px', borderRadius: '6px' }}>
+        {isAdmin && (
+          <button onClick={() => navigate('/admin/dashboard')} className="btn-ghost" style={{ padding: '6px', borderRadius: '6px' }} title="Administration">
+            <Settings size={15} />
+          </button>
+        )}
+
+        <button onClick={onLogout} className="btn-ghost" style={{ padding: '6px', borderRadius: '6px' }} title="Abmelden">
           <LogOut size={15} />
         </button>
       </header>

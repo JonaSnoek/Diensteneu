@@ -1,14 +1,18 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.orm import Session
+from urllib.parse import urlencode
+from jose import jwt, JWTError
 from app.database import get_db
 from app.schemas.auth import LoginRequest, Token
 from app.models.user import User
 from app.models.audit import AuditLog
 from app.config import load_config
-from app.security import verify_password, create_access_token, get_optional_current_user
+from app.security import verify_password, create_access_token, get_optional_current_user, get_token_from_header_or_cookie
 from app.ldap import authenticate_ldap_user
 from app.auth_status import is_ldap_enabled, ldap_status, sso_status
 from app.role_mapping import map_groups_to_role
+from app.routers.sso import discover_oidc
 import datetime
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -21,6 +25,7 @@ def get_auth_methods():
     return {
         "ldap": ldap_status(config),
         "sso": sso_status(config),
+        "guest": {"enabled": bool(config.system_settings.allow_guest_access)},
     }
 
 def map_ldap_groups_to_role(groups: list) -> str:
@@ -162,9 +167,44 @@ def login(
         display_name=user.display_name
     )
 
+def _sso_end_session_url(request: Request, current_user: Optional["User"]) -> Optional[str]:
+    """Build the IdP end_session URL for an SSO session (RP-initiated logout).
+
+    Returns None when the user is not an SSO session, SSO is disabled or the
+    IdP does not expose an ``end_session_endpoint``. The raw ``id_token`` is
+    used as ``id_token_hint`` so the IdP can invalidate the user's SSO
+    session.  Errors are caught silently – logout must never fail.
+    """
+    if current_user is None or not current_user.is_sso:
+        return None
+    try:
+        config = load_config()
+        sso = config.sso_config
+        if not (sso and sso.enabled and sso.issuer_url):
+            return None
+        discovery = discover_oidc(sso.issuer_url)
+        end_session_endpoint = discovery.get("end_session_endpoint")
+        if not end_session_endpoint:
+            return None
+        token = get_token_from_header_or_cookie(request)
+        if not token:
+            return None
+        payload = jwt.decode(token, config.secret_key, algorithms=[config.algorithm])
+        id_token_hint = payload.get("sso_id_token")
+        if not id_token_hint:
+            return None
+        params: dict = {"id_token_hint": id_token_hint}
+        if sso.client_id:
+            params["client_id"] = sso.client_id
+        return f"{end_session_endpoint}?{urlencode(params)}"
+    except (JWTError, Exception):
+        return None
+
+
 @router.post("/logout")
-def logout(response: Response, request: Request, current_user: User = Depends(get_optional_current_user), db: Session = Depends(get_db)):
+def logout(response: Response, request: Request, current_user: Optional["User"] = Depends(get_optional_current_user), db: Session = Depends(get_db)):
     response.delete_cookie("access_token")
+    end_session_url = _sso_end_session_url(request, current_user)
     if current_user:
         audit = AuditLog(
             timestamp=datetime.datetime.utcnow(),
@@ -176,7 +216,10 @@ def logout(response: Response, request: Request, current_user: User = Depends(ge
         )
         db.add(audit)
         db.commit()
-    return {"status": "success", "message": "Erfolgreich abgemeldet."}
+    payload = {"status": "success", "message": "Erfolgreich abgemeldet."}
+    if end_session_url:
+        payload["end_session_url"] = end_session_url
+    return payload
 
 @router.get("/me")
 def get_me(current_user: User = Depends(get_optional_current_user)):

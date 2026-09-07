@@ -310,6 +310,7 @@ def resolve_identity(oidc: SsoConfig, code: str, nonce: str) -> Dict[str, Any]:
     id_token = token_data.get("id_token")
     if id_token:
         claims.update(_verify_id_token(id_token, oidc, nonce, access_token))
+        claims["_id_token"] = id_token  # kept raw for the IdP logout (id_token_hint)
     else:
         logger.warning("OIDC response contained no id_token; identity resolved via userinfo only.")
     claims.update({k: v for k, v in fetch_userinfo(discovery, access_token).items() if v is not None})
@@ -457,7 +458,11 @@ def sso_callback(
 
     claimed_groups = extract_groups(claims, oidc.groups_claim)
     role_detail = f" Gruppen={sorted(claimed_groups)}" if claimed_groups else ""
-    token = create_access_token(data={"sub": user.username, "role": user.role})
+    token_data = {"sub": user.username, "role": user.role}
+    raw_id_token = claims.get("_id_token")
+    if raw_id_token:
+        token_data["sso_id_token"] = raw_id_token  # used to build the IdP end_session URL on logout
+    token = create_access_token(data=token_data)
 
     response = RedirectResponse(url="/", status_code=302)
     config = load_config()

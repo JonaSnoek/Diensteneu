@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../utils/api';
-import { Cpu, ShieldCheck, Power, Clock, Check, XCircle, FlaskConical, ExternalLink, Plus, Users } from 'lucide-react';
+import { Cpu, ShieldCheck, UserRound, Power, Clock, Check, XCircle, FlaskConical, ExternalLink, Plus, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 type AuthStatus = {
@@ -13,6 +13,9 @@ type AuthStatus = {
   sso: {
     enabled: boolean;
     provider_name: string | null;
+  };
+  guest: {
+    enabled: boolean;
   };
 };
 
@@ -279,6 +282,7 @@ function AuthSettings() {
                   onChange={e => setTempDuration(Number(e.target.value))}
                   style={{ width: '140px' }}
                 >
+                  <option value={15}>15 Minuten</option>
                   <option value={30}>30 Minuten</option>
                   <option value={60}>1 Stunde</option>
                   <option value={120}>2 Stunden</option>
@@ -462,6 +466,54 @@ function AuthSettings() {
             )}
           </>
         )}
+      </div>
+
+      {/* ------------------------------ GAST ------------------------------ */}
+      <div className="glass-panel" style={{ padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <UserRound size={20} color="var(--primary-color)" />
+            <div>
+              <span style={{ fontWeight: 700, fontSize: '1.05rem' }}>Gastzugang</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginLeft: '10px' }}>Ohne Benutzerkonto</span>
+            </div>
+          </div>
+
+          <div className="switch-container" style={{ padding: 0 }}>
+            <span className="form-label" style={{ marginRight: '10px' }}>GASTZUGANG</span>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={status.guest.enabled}
+                onChange={async (e) => {
+                  setError(''); setSuccess('');
+                  try {
+                    const next = e.target.checked;
+                    await api.put('/system/settings', { allow_guest_access: next });
+                    setSuccess(next ? 'Gastzugang aktiviert.' : 'Gastzugang deaktiviert.');
+                    await fetchAll();
+                  } catch (err: any) {
+                    setError(err.message || 'Änderung fehlgeschlagen.');
+                  }
+                }}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginBottom: '12px' }}>
+          <div>
+            <div className="panel-label">STATUS</div>
+            <div style={{ fontSize: '0.95rem' }}>
+              {status.guest.enabled ? 'Gäste können sich ohne Anmeldung fortbewegen.' : 'Der Gastzugang ist deaktiviert.'}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '14px', borderTop: '1px solid var(--border-color)', paddingTop: '14px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+          Gäste erhalten automatisch die Rolle <strong>Guest</strong> und sehen nur die dafür freigegebenen Inhalte. Sie erhalten keine Admin- oder erweiterten Rechte.
+        </div>
       </div>
     </div>
   );

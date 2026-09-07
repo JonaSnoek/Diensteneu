@@ -6,6 +6,7 @@ import Setup from './pages/Setup';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdminView from './pages/Admin/AdminView';
+import AdminDashboard from './pages/Admin/AdminDashboard';
 import UserManagement from './pages/Admin/UserManagement';
 import AuthSettings from './pages/Admin/AuthSettings';
 import LdapSettings from './pages/Admin/LdapSettings';
@@ -73,12 +74,7 @@ function App() {
         setUser(me);
         setPage('app');
       } catch {
-        if (sysSettings.allow_guest_access) {
-          setUser({ authenticated: false, username: 'guest', display_name: 'Gast', email: null, role: 'Guest', is_ldap: false, is_sso: false, ldap_dn: null });
-          setPage('app');
-        } else {
-          setPage('login');
-        }
+        setPage('login');
       }
     } catch (e) {
       console.error("Initialization failed: ", e);
@@ -130,14 +126,24 @@ function App() {
       localStorage.setItem('access_token', token);
       setUser(userPayload);
       setPage('app');
+    }} onGuestContinue={() => {
+      setUser({ authenticated: false, username: 'guest', display_name: 'Gast', email: null, role: 'Guest', is_ldap: false, is_sso: false, ldap_dn: null, sso_issuer: null });
+      setPage('app');
     }} settings={settings} />;
   }
 
   const handleLogout = async () => {
-    try { await api.post('/auth/logout'); } catch {}
+    let endSessionUrl = '';
+    try {
+      const res = await api.post('/auth/logout');
+      endSessionUrl = res?.end_session_url || '';
+    } catch {}
     localStorage.removeItem('access_token');
     setUser(null);
     setPage('login');
+    if (endSessionUrl) {
+      window.location.href = endSessionUrl;
+    }
   };
 
   return (
@@ -147,7 +153,8 @@ function App() {
             <Route path="/desktop" element={<Dashboard user={user} />} />
             <Route path="/desktop/:category" element={<Dashboard user={user} />} />
           <Route path="/admin" element={<AdminView user={user} />}>
-            <Route index element={<Navigate to="/admin/users" replace />} />
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<UserManagement currentUser={user} />} />
             <Route path="auth" element={<AuthSettings />} />
             <Route path="ldap" element={<LdapSettings />} />

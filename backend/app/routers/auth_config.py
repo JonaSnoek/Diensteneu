@@ -49,6 +49,7 @@ def get_auth_status(admin: User = Depends(require_admin)):
             "enabled": bool(sso and sso.enabled and sso.issuer_url and sso.client_id),
             "provider_name": (sso.provider_name if sso else None),
         },
+        "guest": {"enabled": bool(config.system_settings.allow_guest_access)},
     }
 
 

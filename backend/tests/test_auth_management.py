@@ -645,3 +645,95 @@ def test_idtoken_without_access_token_disables_at_hash(client, sso_discovery, mo
 
     assert "access_token" not in captured
     assert captured["options"]["verify_at_hash"] is False
+
+
+# ------------------------------------------- 13. guest status + SSO end_session logout
+def test_methods_include_guest_flag(client):
+    config = load_config()
+    config.system_settings.allow_guest_access = True
+    save_config(config)
+    data = client.get("/api/auth/methods").json()
+    assert data["guest"]["enabled"] is True
+
+    config.system_settings.allow_guest_access = False
+    save_config(config)
+    data2 = client.get("/api/auth/methods").json()
+    assert data2["guest"]["enabled"] is False
+
+
+def test_admin_status_includes_guest(client, db_session):
+    from app.security import get_password_hash
+    from app.models.user import User as UserModel
+    user = UserModel(
+        username="root",
+        hashed_password=get_password_hash("pw"),
+        display_name="Root",
+        is_active=True,
+        is_ldap=False,
+        is_sso=False,
+        role="Root",
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    config = load_config()
+    config.system_settings.allow_guest_access = True
+    save_config(config)
+
+    login = client.post("/api/auth/login", json={"username": "root", "password": "pw"})
+    assert login.status_code == 200
+    token = login.json()["access_token"]
+
+    resp = client.get("/api/auth/admin/status", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["guest"]["enabled"] is True
+    assert "ldap" in body and "sso" in body
+
+
+def test_sso_logout_returns_end_session_url(client, db_session, sso_discovery, monkeypatch):
+    config = load_config()
+    enable_sso(config)
+    save_config(config)
+
+    monkeypatch.setattr(
+        sso_mod, "resolve_identity",
+        lambda oidc, code, nonce: {
+            "sub": "sub-12345",
+            "iss": FAKE_ISSUER,
+            "preferred_username": "jdoe",
+            "name": "Jane Doe",
+            "email": "jane@example.com",
+            "_id_token": "raw.id.token",
+        },
+    )
+
+    sso_resp = run_sso_login(client)
+    assert sso_resp.status_code == 302
+    token = sso_resp.cookies.get("access_token")
+    assert token
+
+    monkeypatch.setattr(
+        auth_mod, "discover_oidc",
+        lambda issuer: {"end_session_endpoint": "https://idp.example.com/end_session"},
+    )
+    client.cookies.set("access_token", token)
+    logout = client.post("/api/auth/logout")
+    assert logout.status_code == 200
+    end_session_url = logout.json().get("end_session_url")
+    assert end_session_url
+    assert end_session_url.startswith("https://idp.example.com/end_session")
+    assert "id_token_hint=raw.id.token" in end_session_url
+
+
+def test_non_sso_logout_has_no_end_session_url(client, db_session, monkeypatch):
+    config = load_config()
+    _add_enabled_ldap_config(config)
+    monkeypatch.setattr(auth_mod, "authenticate_ldap_user", lambda u, p: fake_ldap_auth(u, p))
+
+    login = client.post("/api/auth/login", json={"username": "jdoe", "password": "pw"})
+    assert login.status_code == 200
+
+    logout = client.post("/api/auth/logout")
+    assert logout.status_code == 200
+    assert "end_session_url" not in logout.json()
