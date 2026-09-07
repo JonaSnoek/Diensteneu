@@ -22,6 +22,7 @@ export type UserType = {
   display_name: string;
   email: string | null;
   role: string;
+  effective_role?: string;
   is_ldap: boolean;
   is_sso: boolean;
   ldap_dn: string | null;

@@ -237,7 +237,7 @@ const adminItems = [
 ];
 
 function Dashboard({ user }: { user: UserType }) {
-  const userLevel = roleLevel[user.role] ?? 0;
+  const userLevel = roleLevel[user.effective_role || user.role] ?? 0;
   const visibleAdminItems = adminItems.filter(item => userLevel >= roleLevel[item.minRole]);
   const [launchers, setLaunchers] = useState<LauncherType[]>([]);
   const [searchQuery, setSearchQuery] = useState('');

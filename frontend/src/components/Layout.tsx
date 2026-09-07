@@ -10,7 +10,8 @@ type LayoutProps = {
 
 function Layout({ user, onLogout }: LayoutProps) {
   const navigate = useNavigate();
-  const isAdmin = user.role === 'Root' || user.role === 'Admin';
+  const effective = user.effective_role || user.role;
+  const isAdmin = effective === 'Root' || effective === 'Admin';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg)' }}>
