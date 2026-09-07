@@ -163,10 +163,13 @@ baut das Frontend und startet den Backend-Service neu
 (DB-Migrationen laufen automatisch beim Start).
 
   cd /opt/portal
-  sudo ./update.sh
+  sudo bash update.sh
+
+  (Alternativ, wenn das Skript ausführbar markiert ist:
+   sudo ./update.sh)
 
 Optional: anderer Projekt-Pfad oder Backend-Port
-  sudo PORTAL_DIR=/pfad/zum/projekt BACKEND_PORT=8000 ./update.sh
+  sudo PORTAL_DIR=/pfad/zum/projekt BACKEND_PORT=8000 bash update.sh
 
 Was passiert dabei:
   - Backup:          /opt/portal/backups/portal-<DATUM>.tar.gz
