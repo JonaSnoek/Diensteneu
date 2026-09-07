@@ -153,6 +153,38 @@ Nach dem Setup:
   → Lege den Admin-Benutzer und ggf. LDAP-Einstellungen an.
 
 ===========================================================
+ UPDATE (BESTEHENDE INSTALLATION)
+===========================================================
+
+Das Skript `update.sh` aktualisiert eine bestehende Installation
+auf den neuesten GitHub-Stand. Es sichert vorher Datenbank und
+Konfiguration, zieht den neuen Code, aktualisiert Abhängigkeiten,
+baut das Frontend und startet den Backend-Service neu
+(DB-Migrationen laufen automatisch beim Start).
+
+  cd /opt/portal
+  sudo ./update.sh
+
+Optional: anderer Projekt-Pfad oder Backend-Port
+  sudo PORTAL_DIR=/pfad/zum/projekt BACKEND_PORT=8000 ./update.sh
+
+Was passiert dabei:
+  - Backup:          /opt/portal/backups/portal-<DATUM>.tar.gz
+  - Neuer Stand:     git pull (Branch master)
+  - Python-Deps:     pip install -r backend/requirements.txt
+  - Frontend:        npm ci + npm run build
+  - Neustart:        sudo systemctl restart portal-backend
+  - Health-Check:    curl http://127.0.0.1:8000/
+
+Rollback:
+  - Backup entpacken:  tar -xzf backups/portal-<DATUM>.tar.gz -C backend/data
+  - Alten Stand holen: cd /opt/portal && sudo git reset --hard <älterer-commit>
+  - Neustarten:        sudo systemctl restart portal-backend
+
+Hinweis: config.json, Portal-Datenbank und Uploads sind gitignored
+und werden durch das Update nie überschrieben.
+
+===========================================================
  NÜTZLICHE BEFEHLE
 ===========================================================
 

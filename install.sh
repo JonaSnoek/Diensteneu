@@ -13,7 +13,7 @@ set -euo pipefail
 
 PORJECT_DIR="/opt/portal"
 REPO_URL="https://github.com/JonaSnoek/Diensteneu.git"
-BRANCH="main"
+BRANCH="master"
 BACKEND_PORT=8000
 FRONTEND_PORT=80
 NGINX_SITE="portal"
