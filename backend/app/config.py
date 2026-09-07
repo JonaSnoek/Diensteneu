@@ -31,6 +31,24 @@ class LdapServerConfig(BaseModel):
     sync_interval_minutes: int = 60
     enabled: bool = False
 
+class SsoConfig(BaseModel):
+    """OpenID Connect / SSO provider configuration."""
+    enabled: bool = False
+    provider_name: str = "SSO"
+    issuer_url: str = ""
+    client_id: str = ""
+    client_secret: str = ""
+    redirect_uri: str = ""
+    scopes: str = "openid profile email groups"
+    username_claim: str = "preferred_username"
+    display_name_claim: str = "name"
+    email_claim: str = "email"
+    # Name of the claim that carries the user's group memberships (the `groups` scope
+    # must be requested for the IdP to populate it). "Group claiming": the claimed
+    # groups are mapped to portal roles via group_to_role_mapping (like LDAP).
+    groups_claim: str = "groups"
+    group_to_role_mapping: Dict[str, str] = Field(default_factory=dict)  # {"it-admins": "Admin", ...}
+
 class SystemSettings(BaseModel):
     portal_name: str = "Central Service Portal"
     logo_url: Optional[str] = None
@@ -47,6 +65,12 @@ class AppConfig(BaseModel):
     algorithm: str = "HS256"
     system_settings: SystemSettings = Field(default_factory=SystemSettings)
     ldap_configs: List[LdapServerConfig] = Field(default_factory=list)
+    # Master switch for LDAP authentication (independent from per-server `enabled` flags)
+    ldap_enabled: bool = True
+    # ISO 8601 timestamp (UTC, timezone-aware). While `now < ldap_disabled_until`
+    # holds, LDAP authentication is rejected server-side and auto-reactivates after expiry.
+    ldap_disabled_until: Optional[str] = None
+    sso_config: Optional[SsoConfig] = None
 
 _active_config: Optional[AppConfig] = None
 

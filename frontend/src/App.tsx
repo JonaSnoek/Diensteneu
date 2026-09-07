@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdminView from './pages/Admin/AdminView';
 import UserManagement from './pages/Admin/UserManagement';
+import AuthSettings from './pages/Admin/AuthSettings';
 import LdapSettings from './pages/Admin/LdapSettings';
 import LauncherManagement from './pages/Admin/LauncherManagement';
 import ModuleManagement from './pages/Admin/ModuleManagement';
@@ -21,7 +22,9 @@ export type UserType = {
   email: string | null;
   role: string;
   is_ldap: boolean;
+  is_sso: boolean;
   ldap_dn: string | null;
+  sso_issuer?: string | null;
 };
 
 export type SystemSettingsType = {
@@ -71,7 +74,7 @@ function App() {
         setPage('app');
       } catch {
         if (sysSettings.allow_guest_access) {
-          setUser({ authenticated: false, username: 'guest', display_name: 'Gast', email: null, role: 'Guest', is_ldap: false, ldap_dn: null });
+          setUser({ authenticated: false, username: 'guest', display_name: 'Gast', email: null, role: 'Guest', is_ldap: false, is_sso: false, ldap_dn: null });
           setPage('app');
         } else {
           setPage('login');
@@ -146,6 +149,7 @@ function App() {
           <Route path="/admin" element={<AdminView user={user} />}>
             <Route index element={<Navigate to="/admin/users" replace />} />
             <Route path="users" element={<UserManagement currentUser={user} />} />
+            <Route path="auth" element={<AuthSettings />} />
             <Route path="ldap" element={<LdapSettings />} />
             <Route path="launchers" element={<LauncherManagement />} />
             <Route path="modules" element={<ModuleManagement currentUser={user} />} />

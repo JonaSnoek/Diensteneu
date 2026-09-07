@@ -22,7 +22,10 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: int
     is_ldap: bool
+    is_sso: bool = False
     ldap_dn: Optional[str] = None
+    sso_sub: Optional[str] = None
+    sso_issuer: Optional[str] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
 

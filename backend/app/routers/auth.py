@@ -7,33 +7,35 @@ from app.models.audit import AuditLog
 from app.config import load_config
 from app.security import verify_password, create_access_token, get_optional_current_user
 from app.ldap import authenticate_ldap_user
+from app.auth_status import is_ldap_enabled, ldap_status, sso_status
+from app.role_mapping import map_groups_to_role
 import datetime
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-def map_ldap_groups_to_role(groups: list) -> str:
-    """Maps user's LDAP groups to a portal role (Root, Admin, Creator, User, Guest)."""
+@router.get("/methods")
+def get_auth_methods():
+    """Public: reports which authentication methods are currently available.
+    Used by the login page to render dynamically. No secrets are exposed."""
     config = load_config()
-    
-    # We aggregate the highest matching role
-    # Role hierarchy: Root > Admin > Creator > User > Guest
-    role_priority = {"Root": 5, "Admin": 4, "Creator": 3, "User": 2, "Guest": 1}
-    highest_role = "User" # Default role for authenticated users
-    highest_priority = role_priority["User"]
+    return {
+        "ldap": ldap_status(config),
+        "sso": sso_status(config),
+    }
 
+def map_ldap_groups_to_role(groups: list) -> str:
+    """Maps user's LDAP groups to a portal role (Root, Admin, Creator, User, Guest).
+
+    Aggregates the group->role mappings of all enabled LDAP servers and returns
+    the highest matching role. Delegates to the shared role-mapping helper so
+    LDAP and SSO behave identically.
+    """
+    config = load_config()
+    merged_mapping: dict = {}
     for ldap_cfg in config.ldap_configs:
-        if not ldap_cfg.enabled:
-            continue
-        for group in groups:
-            # Case insensitive group match
-            for ldap_group, target_role in ldap_cfg.group_to_role_mapping.items():
-                if ldap_group.lower() == group.lower():
-                    priority = role_priority.get(target_role, 0)
-                    if priority > highest_priority:
-                        highest_role = target_role
-                        highest_priority = priority
-                        
-    return highest_role
+        if ldap_cfg.enabled:
+            merged_mapping.update(ldap_cfg.group_to_role_mapping or {})
+    return map_groups_to_role(groups, merged_mapping)
 
 @router.post("/login", response_model=Token)
 def login(
@@ -50,45 +52,62 @@ def login(
     user = db.query(User).filter(User.username == username).first()
     authenticated = False
     
-    if user and not user.is_ldap:
-        if verify_password(password, user.hashed_password):
+    if user and not user.is_ldap and not user.is_sso:
+        if user.hashed_password and verify_password(password, user.hashed_password):
             authenticated = True
             
-    # 2. Attempt LDAP login if not authenticated locally
+    # 2. Attempt LDAP login if not authenticated locally.
+    #    Server-side enforcement: if LDAP is deactivated, the login is rejected
+    #    and no LDAP connection attempt is made – this cannot be bypassed.
     ldap_details = None
     if not authenticated:
-        ldap_details = authenticate_ldap_user(username, password)
-        if ldap_details:
-            authenticated = True
-            
-            # Map roles
-            mapped_role = map_ldap_groups_to_role(ldap_details["groups"])
-            
-            # Update cache or auto-create LDAP user locally
-            if user:
-                user.display_name = ldap_details["display_name"]
-                user.email = ldap_details["email"]
-                user.ldap_dn = ldap_details["dn"]
-                user.ldap_groups = ldap_details["groups"]
-                if not user.is_active:
-                    user.is_active = True
-                if user.hashed_password is None:
-                    user.hashed_password = "_ldap_activated_"
-                db.commit()
-            else:
-                user = User(
-                    username=username,
-                    display_name=ldap_details["display_name"],
-                    email=ldap_details["email"],
-                    is_active=True,
-                    is_ldap=True,
-                    ldap_dn=ldap_details["dn"],
-                    ldap_groups=ldap_details["groups"],
-                    role=mapped_role
-                )
-                db.add(user)
-                db.commit()
-                db.refresh(user)
+        if is_ldap_enabled(config):
+            ldap_details = authenticate_ldap_user(username, password)
+            if ldap_details:
+                authenticated = True
+                
+                # Map roles
+                mapped_role = map_ldap_groups_to_role(ldap_details["groups"])
+                
+                # Update cache or auto-create LDAP user locally
+                if user:
+                    user.display_name = ldap_details["display_name"]
+                    user.email = ldap_details["email"]
+                    user.ldap_dn = ldap_details["dn"]
+                    user.ldap_groups = ldap_details["groups"]
+                    if not user.is_active:
+                        user.is_active = True
+                    if user.hashed_password is None:
+                        user.hashed_password = "_ldap_activated_"
+                    db.commit()
+                else:
+                    user = User(
+                        username=username,
+                        display_name=ldap_details["display_name"],
+                        email=ldap_details["email"],
+                        is_active=True,
+                        is_ldap=True,
+                        ldap_dn=ldap_details["dn"],
+                        ldap_groups=ldap_details["groups"],
+                        role=mapped_role
+                    )
+                    db.add(user)
+                    db.commit()
+                    db.refresh(user)
+        elif not user:
+            # LDAP is switched off and the username is not a local account.
+            audit = AuditLog(
+                timestamp=datetime.datetime.utcnow(),
+                action="LOGIN_FAILED",
+                details=f"LDAP-Login abgelehnt: LDAP momentan deaktiviert (username='{username}')",
+                ip_address=request.client.host if request.client else "127.0.0.1"
+            )
+            db.add(audit)
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="LDAP-Anmeldung ist derzeit deaktiviert."
+            )
 
     if not authenticated or not user:
         audit = AuditLog(
@@ -172,7 +191,9 @@ def get_me(current_user: User = Depends(get_optional_current_user)):
             "email": current_user.email,
             "role": current_user.role,
             "is_ldap": current_user.is_ldap,
-            "ldap_dn": current_user.ldap_dn
+            "is_sso": current_user.is_sso,
+            "ldap_dn": current_user.ldap_dn,
+            "sso_issuer": current_user.sso_issuer
         }
     
     # If no user and guest access is enabled, return Guest details
@@ -184,7 +205,9 @@ def get_me(current_user: User = Depends(get_optional_current_user)):
             "email": None,
             "role": "Guest",
             "is_ldap": False,
-            "ldap_dn": None
+            "is_sso": False,
+            "ldap_dn": None,
+            "sso_issuer": None
         }
         
     raise HTTPException(

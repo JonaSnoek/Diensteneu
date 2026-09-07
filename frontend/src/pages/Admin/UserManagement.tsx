@@ -15,6 +15,7 @@ type DbUserType = {
   role: string;
   is_active: boolean;
   is_ldap: boolean;
+  is_sso?: boolean;
   ldap_dn: string | null;
   created_at: string;
 };
@@ -211,6 +212,9 @@ function UserManagement({ currentUser }: UserManagementProps) {
                     <span className={`badge ${u.is_ldap ? 'badge-accent' : 'badge-primary'}`}>
                       {u.is_ldap ? 'LDAP' : 'Lokal'}
                     </span>
+                    {u.is_sso && (
+                      <span className="badge badge-warning" style={{ marginLeft: '6px' }}>SSO</span>
+                    )}
                   </td>
                   <td>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

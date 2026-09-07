@@ -56,4 +56,21 @@ def create_tables():
     # Import models inside function to avoid circular imports
     import app.models
     Base.metadata.create_all(bind=engine)
+    run_migrations(engine)
+
+def run_migrations(engine):
+    """Lightweight migrations for schema additions on existing databases."""
+    from sqlalchemy import text
+    migrations = [
+        "ALTER TABLE users ADD COLUMN is_sso BOOLEAN DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN sso_sub VARCHAR",
+        "ALTER TABLE users ADD COLUMN sso_issuer VARCHAR",
+    ]
+    for stmt in migrations:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(stmt))
+        except Exception:
+            # Column already exists (SQLite has no IF NOT EXISTS for columns)
+            pass
 

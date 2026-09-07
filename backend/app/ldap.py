@@ -2,6 +2,7 @@ import logging
 from typing import Optional, Dict, Any, List, Tuple
 from ldap3 import Server, Connection, ALL, SUBTREE
 from app.config import load_config, LdapServerConfig
+from app.auth_status import is_ldap_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -9,8 +10,15 @@ def authenticate_ldap_user(username: str, password: str) -> Optional[Dict[str, A
     """
     Attempts to authenticate a user against all enabled LDAP servers.
     Returns user details (username, display_name, email, groups, dn) if successful, None otherwise.
+
+    Server-side enforcement: if LDAP is deactivated (permanently or temporarily),
+    no LDAP connection attempt is made at all.
     """
     config = load_config()
+    if not is_ldap_enabled(config):
+        logger.info("LDAP authentication rejected: LDAP is currently deactivated (user '%s')", username)
+        return None
+
     enabled_ldaps = [c for c in config.ldap_configs if c.enabled]
     
     if not enabled_ldaps:
@@ -146,8 +154,17 @@ def sync_ldap_users_and_groups() -> List[Dict[str, Any]]:
     This helper provides structure for batch syncing.
     """
     config = load_config()
-    results = []
-    
+    results: List[Dict[str, Any]] = []
+    if not is_ldap_enabled(config):
+        logger.info("LDAP synchronization skipped: LDAP is currently deactivated.")
+        results.append({
+            "ldap_name": "LDAP (deactivated)",
+            "users": [],
+            "status": "Skipped",
+            "error": "LDAP momentan deaktiviert"
+        })
+        return results
+
     for ldap_cfg in config.ldap_configs:
         if not ldap_cfg.enabled:
             continue

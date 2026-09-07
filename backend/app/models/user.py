@@ -22,6 +22,9 @@ class User(Base):
     is_ldap = Column(Boolean, default=False)
     ldap_dn = Column(String, nullable=True)
     ldap_groups = Column(JSON, default=list) # Caches user's LDAP groups on login/sync
+    is_sso = Column(Boolean, default=False)
+    sso_sub = Column(String, nullable=True, index=True) # Stable ID from the SSO/IdP
+    sso_issuer = Column(String, nullable=True) # IdP that issued the SSO identity
     role = Column(String, default="User") # Root, Admin, Creator, User, Guest
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

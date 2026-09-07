@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { Users, Cpu, LayoutGrid, FolderCode, Settings, ShieldAlert, ChevronLeft } from 'lucide-react';
+import { Users, Cpu, KeyRound, LayoutGrid, FolderCode, Settings, ShieldAlert, ChevronLeft } from 'lucide-react';
 import type { UserType } from '../../App';
 
 type AdminViewProps = {
@@ -8,6 +8,7 @@ type AdminViewProps = {
 
 const adminTabs = [
   { id: '/admin/users', label: 'Benutzer', icon: Users },
+  { id: '/admin/auth', label: 'Authentifizierung', icon: KeyRound },
   { id: '/admin/ldap', label: 'LDAP / AD', icon: Cpu },
   { id: '/admin/launchers', label: 'Kacheln (Tiles)', icon: LayoutGrid },
   { id: '/admin/modules', label: 'HTML-Module', icon: FolderCode },

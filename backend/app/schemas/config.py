@@ -14,6 +14,26 @@ class LdapServerConfigSchema(BaseModel):
     sync_interval_minutes: int = 60
     enabled: bool = False
 
+class LdapDisableTemporaryRequest(BaseModel):
+    # Either an absolute ISO 8601 timestamp (timezone-aware, will be stored normalized to UTC)
+    disable_until: Optional[str] = None
+    # Or a relative duration in minutes from now
+    duration_minutes: Optional[int] = Field(None, ge=1)
+
+class SsoConfigSchema(BaseModel):
+    enabled: bool = False
+    provider_name: str = "SSO"
+    issuer_url: str = ""
+    client_id: str = ""
+    client_secret: str = ""
+    redirect_uri: str = ""
+    scopes: str = "openid profile email groups"
+    username_claim: str = "preferred_username"
+    display_name_claim: str = "name"
+    email_claim: str = "email"
+    groups_claim: str = "groups"
+    group_to_role_mapping: Dict[str, str] = Field(default_factory=dict)
+
 class SystemSettingsUpdate(BaseModel):
     portal_name: Optional[str] = None
     logo_url: Optional[str] = None
