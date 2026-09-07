@@ -72,8 +72,15 @@ function App() {
 
       try {
         const me = await api.get('/auth/me') as UserType;
-        setUser(me);
-        setPage('app');
+        if (me.authenticated) {
+          setUser(me);
+          setPage('app');
+        } else {
+          // Guest session or unknown caller: always show the login first so the
+          // user can choose how to sign in (or continue as guest).
+          setUser(null);
+          setPage('login');
+        }
       } catch {
         setPage('login');
       }

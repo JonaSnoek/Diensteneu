@@ -221,9 +221,10 @@ function Login({ onLoginSuccess, onGuestContinue, settings }: LoginProps) {
             Derzeit ist keine Anmeldung möglich.
           </div>
         )}
-      </div>
-      <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-        Erstellt von <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Jona Snoek</span>
+
+        <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border)', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+          Erstellt von <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Jona Snoek</span>
+        </div>
       </div>
     </div>
   );
