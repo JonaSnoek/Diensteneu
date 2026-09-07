@@ -221,16 +221,6 @@ function Login({ onLoginSuccess, onGuestContinue, settings }: LoginProps) {
             Derzeit ist keine Anmeldung möglich.
           </div>
         )}
-
-        <div style={{ marginTop: '24px', padding: '12px', borderRadius: 'var(--radius-sm)', background: 'rgba(var(--primary-rgb), 0.04)', border: '1px solid rgba(var(--primary-rgb), 0.08)', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-          {ldapAvailable && ssoAvailable && guestAvailable && 'Unterstützt SSO, lokale Konten, LDAP/AD sowie den Gastzugang.'}
-          {ldapAvailable && ssoAvailable && !guestAvailable && 'Unterstützt SSO, lokale Konten sowie LDAP/AD-Anbindung.'}
-          {!ldapAvailable && ssoAvailable && guestAvailable && 'Unterstützt SSO und Gastzugang.'}
-          {ldapAvailable && !ssoAvailable && guestAvailable && 'Unterstützt lokale Konten, LDAP/AD sowie Gastzugang.'}
-          {!ldapAvailable && !ssoAvailable && guestAvailable && 'Unterstützt ausschließlich den Gastzugang.'}
-          {!ldapAvailable && ssoAvailable && !guestAvailable && 'Unterstützt ausschließlich SSO-Anmeldung.'}
-          {ldapAvailable && !ssoAvailable && !guestAvailable && 'Unterstützt lokale Konten sowie LDAP/AD-Anbindung.'}
-        </div>
       </div>
       <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
         Erstellt von <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Jona Snoek</span>
