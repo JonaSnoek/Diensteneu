@@ -5,6 +5,7 @@ from app.models.user import User
 from app.models.audit import AuditLog
 from app.schemas.user import UserCreate, UserUpdate, UserResponse, PasswordChangeRequest
 from app.security import get_password_hash, verify_password, get_current_user, require_admin
+from app.role_mapping import canonicalize_role
 import datetime
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -29,7 +30,8 @@ def create_user(
         raise HTTPException(status_code=400, detail="Benutzername existiert bereits.")
         
     # Prevent assigning Root role unless creator is Root themselves
-    if user_data.role == "Root" and admin.role != "Root":
+    target_role = canonicalize_role(user_data.role)
+    if target_role == "Root" and admin.role != "Root":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="Nur Root-Benutzer können Root-Rechte vergeben."
@@ -40,7 +42,7 @@ def create_user(
         hashed_password=get_password_hash(user_data.password),
         display_name=user_data.display_name or user_data.username,
         email=user_data.email,
-        role=user_data.role,
+        role=target_role,
         is_active=user_data.is_active,
         is_ldap=False
     )
@@ -82,7 +84,7 @@ def update_user(
         )
         
     # Prevent upgrading role to Root unless current admin is Root
-    if user_data.role == "Root" and user.role != "Root" and admin.role != "Root":
+    if user_data.role is not None and canonicalize_role(user_data.role) == "Root" and user.role != "Root" and admin.role != "Root":
          raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Nur Root-Benutzer können Root-Rechte vergeben."
@@ -94,7 +96,7 @@ def update_user(
     if user_data.email is not None:
         user.email = user_data.email
     if user_data.role is not None:
-        user.role = user_data.role
+        user.role = canonicalize_role(user_data.role)
     if user_data.is_active is not None:
         # Prevent Root user from self-deactivating
         if user.role == "Root" and not user_data.is_active:

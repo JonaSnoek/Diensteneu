@@ -324,7 +324,9 @@ function UserManagement({ currentUser }: UserManagementProps) {
                   <label className="form-label">ROLLE</label>
                   <select className="form-select" value={role} onChange={e => setRole(e.target.value)}>
                     <option value="Admin">Admin</option>
+                    <option value="Moderator">Moderator</option>
                     <option value="Creator">Creator</option>
+                    <option value="Editor">Editor</option>
                     <option value="User">User</option>
                     <option value="Guest">Guest</option>
                   </select>
@@ -397,7 +399,9 @@ function UserManagement({ currentUser }: UserManagementProps) {
                   >
                     {selectedUser.role === 'Root' && <option value="Root">Root</option>}
                     <option value="Admin">Admin</option>
+                    <option value="Moderator">Moderator</option>
                     <option value="Creator">Creator</option>
+                    <option value="Editor">Editor</option>
                     <option value="User">User</option>
                     <option value="Guest">Guest</option>
                   </select>

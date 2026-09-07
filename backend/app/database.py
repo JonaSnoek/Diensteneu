@@ -65,6 +65,7 @@ def run_migrations(engine):
         "ALTER TABLE users ADD COLUMN is_sso BOOLEAN DEFAULT 0",
         "ALTER TABLE users ADD COLUMN sso_sub VARCHAR",
         "ALTER TABLE users ADD COLUMN sso_issuer VARCHAR",
+        "ALTER TABLE users ADD COLUMN sso_groups TEXT",
     ]
     for stmt in migrations:
         try:

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import load_config
 from app.database import get_db
 from app.models.user import User
+from app.role_mapping import effective_role_for_user
 
 # OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
@@ -102,11 +103,13 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     def __call__(self, current_user: User = Depends(get_current_user)) -> User:
-        # Root role overrides all permissions
-        if current_user.role == "Root":
+        # Central permission check: the effective role merges LDAP + SSO groups
+        # and the manually assigned role (highest wins). Root overrides everything.
+        effective_role = effective_role_for_user(current_user)
+        if effective_role == "Root":
             return current_user
-            
-        if current_user.role not in self.allowed_roles:
+
+        if effective_role not in self.allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You do not have permission to access this resource",
@@ -116,5 +119,5 @@ class RoleChecker:
 # Predefined role dependencies
 require_root = RoleChecker(["Root"])
 require_admin = RoleChecker(["Root", "Admin"])
-require_creator = RoleChecker(["Root", "Admin", "Creator"])
-require_user = RoleChecker(["Root", "Admin", "Creator", "User"])
+require_creator = RoleChecker(["Root", "Admin", "Moderator", "Creator", "Editor"])
+require_user = RoleChecker(["Root", "Admin", "Moderator", "Creator", "Editor", "User"])

@@ -7,14 +7,22 @@ from app.models.audit import AuditLog
 from app.schemas.launcher import LauncherCreate, LauncherUpdate, LauncherResponse
 from app.security import get_optional_current_user, get_current_user, require_creator, require_admin
 from app.config import load_config
+from app.role_mapping import effective_role_for_user
 import datetime
 
 router = APIRouter(prefix="/launchers", tags=["launchers"])
 
 def is_launcher_visible_to_user(launcher: Launcher, user: User, allow_guest: bool) -> bool:
-    """Helper to evaluate visibility criteria for a specific user role and group memberships."""
+    """Helper to evaluate visibility criteria for the user's effective role and groups."""
+    if not user:
+        return False
+
+    # Guests may only see public items
+    is_guest = user.role == "Guest"
+    effective = "Guest" if is_guest else effective_role_for_user(user)
+
     # Admins and Roots bypass all checks
-    if user and user.role in ["Root", "Admin"]:
+    if effective in ("Root", "Admin"):
         return True
 
     vis = launcher.visibility
@@ -26,7 +34,7 @@ def is_launcher_visible_to_user(launcher: Launcher, user: User, allow_guest: boo
         return True
         
     # Guest handling
-    if not user or user.role == "Guest":
+    if is_guest:
         # Guest users can only see public items
         return False
 
@@ -34,7 +42,7 @@ def is_launcher_visible_to_user(launcher: Launcher, user: User, allow_guest: boo
         return True
 
     if vis == "role_restricted":
-        return user.role in (launcher.allowed_roles or [])
+        return effective in (launcher.allowed_roles or [])
 
     if vis == "ldap_group_restricted":
         if not user.is_ldap:

@@ -11,7 +11,7 @@ from app.config import load_config
 from app.security import verify_password, create_access_token, get_optional_current_user, get_token_from_header_or_cookie
 from app.ldap import authenticate_ldap_user
 from app.auth_status import is_ldap_enabled, ldap_status, sso_status
-from app.role_mapping import map_groups_to_role
+from app.role_mapping import map_groups_to_role, effective_role_for_user
 from app.routers.sso import discover_oidc
 import datetime
 
@@ -84,6 +84,8 @@ def login(
                         user.is_active = True
                     if user.hashed_password is None:
                         user.hashed_password = "_ldap_activated_"
+                    # Merge LDAP + SSO groups: the highest role wins, never downgrades.
+                    user.role = effective_role_for_user(user)
                     db.commit()
                 else:
                     user = User(
@@ -233,6 +235,7 @@ def get_me(current_user: User = Depends(get_optional_current_user)):
             "display_name": current_user.display_name,
             "email": current_user.email,
             "role": current_user.role,
+            "effective_role": effective_role_for_user(current_user),
             "is_ldap": current_user.is_ldap,
             "is_sso": current_user.is_sso,
             "ldap_dn": current_user.ldap_dn,
@@ -247,6 +250,7 @@ def get_me(current_user: User = Depends(get_optional_current_user)):
             "display_name": "Gast",
             "email": None,
             "role": "Guest",
+            "effective_role": "Guest",
             "is_ldap": False,
             "is_sso": False,
             "ldap_dn": None,

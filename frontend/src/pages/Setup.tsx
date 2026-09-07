@@ -409,7 +409,9 @@ function Setup({ onSetupCompleted }: SetupProps) {
                     >
                       <option value="Root">Root</option>
                       <option value="Admin">Admin</option>
+                      <option value="Moderator">Moderator</option>
                       <option value="Creator">Creator</option>
+                      <option value="Editor">Editor</option>
                       <option value="User">User</option>
                       <option value="Guest">Guest</option>
                     </select>

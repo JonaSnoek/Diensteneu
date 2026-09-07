@@ -399,7 +399,7 @@ function LauncherManagement() {
                 <div className="form-group animate-fade-in">
                   <label className="form-label">ZUGELASSENE ROLLEN</label>
                   <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                    {['Admin', 'Creator', 'User', 'Guest'].map(role => (
+                    {['Admin', 'Moderator', 'Creator', 'Editor', 'User', 'Guest'].map(role => (
                       <label key={role} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
                         <input type="checkbox" checked={allowedRoles.includes(role)} onChange={() => handleRoleCheckbox(role)} />
                         {role}

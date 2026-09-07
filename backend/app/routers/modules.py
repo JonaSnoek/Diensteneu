@@ -12,6 +12,7 @@ from app.models.audit import AuditLog
 from app.schemas.module import ModuleResponse, ModuleUpdate
 from app.security import get_optional_current_user, require_creator, require_admin
 from app.config import load_config, MODULES_DIR, UPLOADS_DIR
+from app.role_mapping import effective_role_for_user
 from app.utils.zip_handler import validate_and_extract_zip
 from app.routers.launchers import is_launcher_visible_to_user
 import datetime
@@ -342,7 +343,8 @@ def serve_module_file(
             )
     else:
         # No launcher exists, only Admins/Creators can access files directly for debugging/setup
-        if not current_user or current_user.role not in ["Root", "Admin", "Creator"]:
+        effective = effective_role_for_user(current_user) if current_user else None
+        if not current_user or effective not in ["Root", "Admin", "Moderator", "Creator", "Editor"]:
              raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Zugriff verweigert."

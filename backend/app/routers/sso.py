@@ -32,7 +32,7 @@ from app.models.audit import AuditLog
 from app.models.user import User
 from app.schemas.config import SsoConfigSchema
 from app.security import create_access_token, require_admin
-from app.role_mapping import map_groups_to_role, ROLE_PRIORITY
+from app.role_mapping import map_groups_to_role, effective_role_for_user
 
 logger = logging.getLogger(__name__)
 
@@ -325,10 +325,10 @@ def _find_or_create_user(db: Session, claims: Dict[str, Any], oidc: SsoConfig) -
     account that also logs in via LDAP to the same portal account, while
     preserving manually assigned roles. Display names are never used for matching.
 
-    "Group claiming": the groups contained in the `groups` claim (requested via the
-    `groups` scope) are mapped to a portal role via group_to_role_mapping. New users
-    receive the mapped role; existing users can only be *elevated* by the mapping
-    (never demoted), so admin-assigned roles are never silently downgraded.
+    "Group claiming": the groups contained in the `groups` claim (requested via
+    the `groups` scope) are stored on the account and mapped to a portal role.
+    LDAP and SSO groups are merged via the central effective-role logic – the
+    highest role wins and the account role is never demoted.
     """
     username = (claims.get(oidc.username_claim) or claims.get("preferred_username") or claims.get("email") or "").strip()
     if not username:
@@ -354,15 +354,15 @@ def _find_or_create_user(db: Session, claims: Dict[str, Any], oidc: SsoConfig) -
 
     if user:
         user.is_sso = True
+        user.sso_groups = groups
         if not user.display_name and display_name:
             user.display_name = display_name
         if not user.email and email:
             user.email = email
         if not user.is_active:
             user.is_active = True
-        # Upgrade-only role from group claiming (never demote an assigned role)
-        if ROLE_PRIORITY.get(mapped_role, 0) > ROLE_PRIORITY.get(user.role, 0):
-            user.role = mapped_role
+        # Merge LDAP + SSO groups: the highest role wins, never downgrades.
+        user.role = effective_role_for_user(user)
         db.commit()
         db.refresh(user)
         return user
@@ -376,6 +376,7 @@ def _find_or_create_user(db: Session, claims: Dict[str, Any], oidc: SsoConfig) -
         is_sso=True,
         sso_sub=sub,
         sso_issuer=issuer,
+        sso_groups=groups,
         role=mapped_role,
     )
     db.add(user)

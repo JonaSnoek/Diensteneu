@@ -232,6 +232,9 @@ function Login({ onLoginSuccess, onGuestContinue, settings }: LoginProps) {
           {ldapAvailable && !ssoAvailable && !guestAvailable && 'Unterstützt lokale Konten sowie LDAP/AD-Anbindung.'}
         </div>
       </div>
+      <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+        Erstellt von <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Jona Snoek</span>
+      </div>
     </div>
   );
 }

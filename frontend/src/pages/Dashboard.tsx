@@ -224,7 +224,7 @@ function AdminItemCard({ label, icon: ItemIcon, path, index }: AdminItemCardProp
 }
 
 const roleLevel: Record<string, number> = {
-  Guest: 0, User: 1, Creator: 2, Admin: 3, Root: 4,
+  Guest: 0, User: 1, Editor: 2, Creator: 2, Moderator: 3, Admin: 4, Root: 5,
 };
 
 const adminItems = [
