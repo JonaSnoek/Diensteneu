@@ -578,3 +578,70 @@ def test_idtoken_nonce_mismatch_rejected(client, sso_discovery, monkeypatch):
     with pytest.raises(HTTPException) as exc:
         sso_mod._verify_id_token("tok", cfg, "nonce123")
     assert "nonce" in exc.value.detail.lower()
+
+
+def test_idtoken_at_hash_validated_with_access_token(client, sso_discovery, monkeypatch):
+    """When an access_token is available it must be handed to python-jose so the
+    at_hash claim (present in Keycloak id_tokens) is validated instead of failing."""
+    import time
+    import types
+
+    claims = {
+        "sub": "sub-x",
+        "iss": "https://idp.example.com/realms/ucs",
+        "aud": "c",
+        "nonce": "n",
+        "exp": int(time.time()) + 3600,
+    }
+    captured = {}
+
+    def fake_decode(token, key, **kwargs):
+        captured.update(kwargs)
+        return dict(claims)
+
+    monkeypatch.setattr(sso_mod, "jose_jwt", types.SimpleNamespace(
+        get_unverified_header=lambda t: {"alg": "RS256", "kid": "k1"},
+        decode=fake_decode,
+    ))
+    monkeypatch.setattr(sso_mod, "_get_jwks", lambda iss: [{"kty": "RSA", "kid": "k1"}])
+    monkeypatch.setattr(sso_mod.jose_jwk, "construct", lambda k, algorithm=None: object())
+
+    cfg = SsoConfig(enabled=True, issuer_url="https://idp.example.com/realms/ucs", client_id="c")
+    sso_mod._verify_id_token("tok", cfg, "n", access_token="at-123")
+
+    assert captured["access_token"] == "at-123"
+    # verify_at_hash stays enabled (no explicit disable) in that case
+    assert captured["options"].get("verify_at_hash") is None or captured["options"]["verify_at_hash"] is True
+
+
+def test_idtoken_without_access_token_disables_at_hash(client, sso_discovery, monkeypatch):
+    """Without an access_token, at_hash validation must be explicitly disabled so a
+    missing comparison value does not raise JWTError."""
+    import time
+    import types
+
+    claims = {
+        "sub": "sub-x",
+        "iss": "https://idp.example.com/realms/ucs",
+        "aud": "c",
+        "nonce": "n",
+        "exp": int(time.time()) + 3600,
+    }
+    captured = {}
+
+    def fake_decode(token, key, **kwargs):
+        captured.update(kwargs)
+        return dict(claims)
+
+    monkeypatch.setattr(sso_mod, "jose_jwt", types.SimpleNamespace(
+        get_unverified_header=lambda t: {"alg": "RS256", "kid": "k1"},
+        decode=fake_decode,
+    ))
+    monkeypatch.setattr(sso_mod, "_get_jwks", lambda iss: [{"kty": "RSA", "kid": "k1"}])
+    monkeypatch.setattr(sso_mod.jose_jwk, "construct", lambda k, algorithm=None: object())
+
+    cfg = SsoConfig(enabled=True, issuer_url="https://idp.example.com/realms/ucs", client_id="c")
+    sso_mod._verify_id_token("tok", cfg, "n")
+
+    assert "access_token" not in captured
+    assert captured["options"]["verify_at_hash"] is False

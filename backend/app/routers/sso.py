@@ -211,19 +211,29 @@ def _normalize_issuer(url: str) -> str:
     return (url or "").rstrip("/")
 
 
-def _decode_claims(id_token: str, oidc: SsoConfig, alg: str, key) -> Dict[str, Any]:
-    """Run the actual JWT verification against a given key."""
-    return jose_jwt.decode(
-        id_token,
-        key,
-        algorithms=[alg],
-        audience=oidc.client_id,
-        issuer=_normalize_issuer(oidc.issuer_url),
-        options={"verify_aud": True, "verify_iss": True, "verify_exp": True, "verify_nbf": True},
-    )
+def _decode_claims(id_token: str, oidc: SsoConfig, alg: str, key, access_token: Optional[str] = None) -> Dict[str, Any]:
+    """Run the actual JWT verification against a given key.
+
+    When an `access_token` is available it is used to validate the `at_hash`
+    claim (binds id_token to access_token, per OIDC Core 3.1.3.6). Without it
+    that validation is skipped so tokens that carry `at_hash` (e.g. Keycloak)
+    do not fail on a missing comparison value.
+    """
+    options = {"verify_aud": True, "verify_iss": True, "verify_exp": True, "verify_nbf": True}
+    kwargs: Dict[str, Any] = {
+        "algorithms": [alg],
+        "audience": oidc.client_id,
+        "issuer": _normalize_issuer(oidc.issuer_url),
+        "options": options,
+    }
+    if access_token:
+        kwargs["access_token"] = access_token
+    else:
+        options["verify_at_hash"] = False
+    return jose_jwt.decode(id_token, key, **kwargs)
 
 
-def _verify_id_token(id_token: str, oidc: SsoConfig, nonce: str) -> Dict[str, Any]:
+def _verify_id_token(id_token: str, oidc: SsoConfig, nonce: str, access_token: Optional[str] = None) -> Dict[str, Any]:
     """Verify signature, issuer, audience and nonce of the id_token.
 
     - HS* tokens are verified against the client secret.
@@ -232,13 +242,15 @@ def _verify_id_token(id_token: str, oidc: SsoConfig, nonce: str) -> Dict[str, An
       invalidated and one retry with fresh keys is performed (covers IdP key
       rotation on long-running processes).
     - The exact python-jose reason is surfaced so the admin can diagnose.
+    - The `at_hash` claim is validated against the exchanged `access_token`
+      when available (and skipped when it is not).
     """
     def _verify() -> Dict[str, Any]:
         header = jose_jwt.get_unverified_header(id_token)
         alg = header.get("alg", "RS256")
 
         if alg.startswith("HS"):
-            return _decode_claims(id_token, oidc, alg, oidc.client_secret or "")
+            return _decode_claims(id_token, oidc, alg, oidc.client_secret or "", access_token)
 
         jwks = _get_jwks(oidc.issuer_url)
         if not jwks:
@@ -250,7 +262,7 @@ def _verify_id_token(id_token: str, oidc: SsoConfig, nonce: str) -> Dict[str, An
         for candidate in candidates:
             try:
                 key = jose_jwk.construct(candidate, algorithm=alg)
-                return _decode_claims(id_token, oidc, alg, key)
+                return _decode_claims(id_token, oidc, alg, key, access_token)
             except JWTError as e:
                 last_error = e
         if last_error:
@@ -297,7 +309,7 @@ def resolve_identity(oidc: SsoConfig, code: str, nonce: str) -> Dict[str, Any]:
     claims: Dict[str, Any] = {}
     id_token = token_data.get("id_token")
     if id_token:
-        claims.update(_verify_id_token(id_token, oidc, nonce))
+        claims.update(_verify_id_token(id_token, oidc, nonce, access_token))
     else:
         logger.warning("OIDC response contained no id_token; identity resolved via userinfo only.")
     claims.update({k: v for k, v in fetch_userinfo(discovery, access_token).items() if v is not None})
