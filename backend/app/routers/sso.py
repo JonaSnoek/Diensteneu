@@ -206,37 +206,74 @@ def fetch_userinfo(discovery: Dict[str, Any], access_token: str) -> Dict[str, An
         raise HTTPException(400, f"Userinfo-Abruf fehlgeschlagen: {e}")
 
 
+def _normalize_issuer(url: str) -> str:
+    """Strip trailing slashes so '.../realms/ucs/' matches the token 'iss' claim."""
+    return (url or "").rstrip("/")
+
+
+def _decode_claims(id_token: str, oidc: SsoConfig, alg: str, key) -> Dict[str, Any]:
+    """Run the actual JWT verification against a given key."""
+    return jose_jwt.decode(
+        id_token,
+        key,
+        algorithms=[alg],
+        audience=oidc.client_id,
+        issuer=_normalize_issuer(oidc.issuer_url),
+        options={"verify_aud": True, "verify_iss": True, "verify_exp": True, "verify_nbf": True},
+    )
+
+
 def _verify_id_token(id_token: str, oidc: SsoConfig, nonce: str) -> Dict[str, Any]:
-    """Verify signature, issuer, audience and nonce of the id_token."""
-    try:
+    """Verify signature, issuer, audience and nonce of the id_token.
+
+    - HS* tokens are verified against the client secret.
+    - RS/PS* tokens are verified against the realm JWKS. Every candidate key is
+      tried (covers missing/rotated `kid`), and on failure the JWKS cache is
+      invalidated and one retry with fresh keys is performed (covers IdP key
+      rotation on long-running processes).
+    - The exact python-jose reason is surfaced so the admin can diagnose.
+    """
+    def _verify() -> Dict[str, Any]:
         header = jose_jwt.get_unverified_header(id_token)
         alg = header.get("alg", "RS256")
 
         if alg.startswith("HS"):
-            key = oidc.client_secret or ""
-        else:
-            jwks = _get_jwks(oidc.issuer_url)
-            kid = header.get("kid")
-            matching = [k for k in jwks if kid and k.get("kid") == kid]
-            if not matching:
-                matching = jwks  # single key without kid
-            if not matching:
-                raise HTTPException(400, "Kein passender JWKS-Key für die ID-Token-Signatur gefunden.")
-            key = jose_jwk.construct(matching[0], algorithm=alg)
+            return _decode_claims(id_token, oidc, alg, oidc.client_secret or "")
 
-        claims = jose_jwt.decode(
-            id_token,
-            key,
-            algorithms=[alg],
-            audience=oidc.client_id,
-            issuer=oidc.issuer_url,
-            options={"verify_aud": True, "verify_iss": True, "verify_exp": True, "verify_nbf": True},
-        )
-    except JWTError as e:
-        logger.error("OIDC id_token verification failed: %s", e)
-        raise HTTPException(400, "ID-Token konnte nicht verifiziert werden.")
+        jwks = _get_jwks(oidc.issuer_url)
+        if not jwks:
+            raise HTTPException(400, "Kein JWKS-Key für die ID-Token-Signatur gefunden.")
+        kid = header.get("kid")
+        candidates = [k for k in jwks if k.get("kid") == kid] or jwks
+
+        last_error: Optional[JWTError] = None
+        for candidate in candidates:
+            try:
+                key = jose_jwk.construct(candidate, algorithm=alg)
+                return _decode_claims(id_token, oidc, alg, key)
+            except JWTError as e:
+                last_error = e
+        if last_error:
+            raise last_error
+        raise JWTError("Kein passender Signaturschlüssel im JWKS gefunden.")
+
+    try:
+        claims = _verify()
     except HTTPException:
         raise
+    except JWTError as e:
+        logger.error("OIDC id_token verification failed: %s", e)
+        # Invalidate the cached JWKS and retry once (handles key rotation)
+        jwks_uri = discover_oidc(oidc.issuer_url).get("jwks_uri")
+        if jwks_uri:
+            _jwks_cache.pop(jwks_uri, None)
+        try:
+            claims = _verify()
+        except HTTPException:
+            raise
+        except JWTError as e2:
+            logger.error("OIDC id_token verification failed after JWKS refresh: %s", e2)
+            raise HTTPException(400, f"ID-Token konnte nicht verifiziert werden. Grund: {e2}")
 
     token_nonce = claims.get("nonce")
     if token_nonce is not None:

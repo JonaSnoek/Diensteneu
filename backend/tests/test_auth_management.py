@@ -18,7 +18,7 @@ import pytest
 
 import app.routers.auth as auth_mod
 import app.routers.sso as sso_mod
-from app.config import load_config, save_config, LdapServerConfig
+from app.config import load_config, save_config, LdapServerConfig, SsoConfig
 from app.models.audit import AuditLog
 from app.models.user import User
 from app.auth_status import utc_now
@@ -497,3 +497,84 @@ def test_sso_no_group_mapping_defaults_to_user_role(client, db_session, sso_disc
     user = db_session.query(User).filter(User.username == "nouser").first()
     assert user is not None
     assert user.role == "User"
+
+
+# ------------------------------------------- 12. id_token verification hardening
+def test_idtoken_issuer_trailing_slash_normalized_and_retry(client, sso_discovery, monkeypatch):
+    """Trailing slash in issuer_url must not break verification; failure reason is
+    surfaced and a JWKS refresh retry is performed."""
+    import types
+    from jose import JWTError
+    from fastapi import HTTPException
+
+    captured = {}
+    calls = {"n": 0}
+
+    def fake_decode(token, key, **kwargs):
+        captured["issuer"] = kwargs.get("issuer")
+        calls["n"] += 1
+        raise JWTError("Signature verification failed.")
+
+    monkeypatch.setattr(sso_mod, "jose_jwt", types.SimpleNamespace(
+        get_unverified_header=lambda t: {"alg": "RS256", "kid": "k1"},
+        decode=fake_decode,
+    ))
+    monkeypatch.setattr(sso_mod, "_get_jwks", lambda iss: [{"kty": "RSA", "kid": "k1"}])
+    monkeypatch.setattr(sso_mod.jose_jwk, "construct", lambda k, algorithm=None: object())
+
+    cfg = SsoConfig(enabled=True, issuer_url="https://idp.example.com/realms/ucs/", client_id="c")
+    with pytest.raises(HTTPException) as exc:
+        sso_mod._verify_id_token("tok", cfg, "nonce1")
+
+    assert captured["issuer"] == "https://idp.example.com/realms/ucs"
+    assert "Signature verification failed" in exc.value.detail
+    assert calls["n"] >= 2  # JWKS cache was invalidated and retried
+
+
+def test_idtoken_verification_success_with_nonce(client, sso_discovery, monkeypatch):
+    import time
+    import types
+
+    claims = {
+        "sub": "sub-x",
+        "iss": "https://idp.example.com/realms/ucs",
+        "aud": "c",
+        "nonce": "nonce123",
+        "exp": int(time.time()) + 3600,
+    }
+    monkeypatch.setattr(sso_mod, "jose_jwt", types.SimpleNamespace(
+        get_unverified_header=lambda t: {"alg": "RS256", "kid": "k1"},
+        decode=lambda tok, key, **kw: dict(claims),
+    ))
+    monkeypatch.setattr(sso_mod, "_get_jwks", lambda iss: [{"kty": "RSA", "kid": "k1"}])
+    monkeypatch.setattr(sso_mod.jose_jwk, "construct", lambda k, algorithm=None: object())
+
+    cfg = SsoConfig(enabled=True, issuer_url="https://idp.example.com/realms/ucs", client_id="c")
+    result = sso_mod._verify_id_token("tok", cfg, "nonce123")
+    assert result["sub"] == "sub-x"
+
+
+def test_idtoken_nonce_mismatch_rejected(client, sso_discovery, monkeypatch):
+    import time
+    import types
+
+    claims = {
+        "sub": "sub-x",
+        "iss": "https://idp.example.com/realms/ucs",
+        "aud": "c",
+        "nonce": "other-nonce",
+        "exp": int(time.time()) + 3600,
+    }
+    from fastapi import HTTPException
+
+    monkeypatch.setattr(sso_mod, "jose_jwt", types.SimpleNamespace(
+        get_unverified_header=lambda t: {"alg": "RS256", "kid": "k1"},
+        decode=lambda tok, key, **kw: dict(claims),
+    ))
+    monkeypatch.setattr(sso_mod, "_get_jwks", lambda iss: [{"kty": "RSA", "kid": "k1"}])
+    monkeypatch.setattr(sso_mod.jose_jwk, "construct", lambda k, algorithm=None: object())
+
+    cfg = SsoConfig(enabled=True, issuer_url="https://idp.example.com/realms/ucs", client_id="c")
+    with pytest.raises(HTTPException) as exc:
+        sso_mod._verify_id_token("tok", cfg, "nonce123")
+    assert "nonce" in exc.value.detail.lower()
