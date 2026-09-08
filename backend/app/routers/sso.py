@@ -487,6 +487,31 @@ def sso_status_endpoint():
     return {"enabled": enabled, "provider_name": (sso.provider_name if sso else None)}
 
 
+@router.get("/groups")
+def get_sso_groups(
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """Admin: all SSO/IdP group names known to the portal.
+
+    Groups are collected from the IdP claims of users that have logged in via
+    SSO (``sso_groups``) plus every group that is already part of the
+    group->role mapping. The login page / settings UI uses this list so the
+    administrator can *select* a group instead of typing it.
+    """
+    config = load_config()
+    seen: set = set()
+    for row in db.query(User.sso_groups).all():
+        groups = row.sso_groups
+        if isinstance(groups, list):
+            for g in groups:
+                if g is not None and str(g).strip():
+                    seen.add(str(g).strip())
+    if config.sso_config:
+        seen.update((config.sso_config.group_to_role_mapping or {}).keys())
+    return {"groups": sorted(seen, key=lambda g: g.lower())}
+
+
 @router.get("/config")
 def get_sso_config(admin: User = Depends(require_admin)):
     config = load_config()

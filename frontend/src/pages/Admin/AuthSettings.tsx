@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../utils/api';
-import { Cpu, ShieldCheck, UserRound, Power, Clock, Check, XCircle, FlaskConical, ExternalLink, Plus, Users } from 'lucide-react';
+import { Cpu, ShieldCheck, UserRound, Power, Clock, Check, XCircle, FlaskConical, ExternalLink, Plus, Users, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 type AuthStatus = {
@@ -71,6 +71,9 @@ function AuthSettings() {
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [newGroupKey, setNewGroupKey] = useState('');
   const [newGroupRole, setNewGroupRole] = useState('User');
+  const [knownGroups, setKnownGroups] = useState<string[]>([]);
+  const [newGroupCustom, setNewGroupCustom] = useState(false);
+  const [groupsLoading, setGroupsLoading] = useState(false);
 
   const timerRef = useRef<number | null>(null);
 
@@ -91,6 +94,7 @@ function AuthSettings() {
 
   useEffect(() => {
     fetchAll();
+    loadSsoGroups();
     timerRef.current = window.setInterval(() => setNow(Date.now()), 30000);
     return () => { if (timerRef.current) window.clearInterval(timerRef.current); };
   }, []);
@@ -166,6 +170,18 @@ function AuthSettings() {
       setTestResult({ ok: false, message: err.message || 'Verbindungstest fehlgeschlagen.' });
     } finally {
       setTestingSso(false);
+    }
+  };
+
+  const loadSsoGroups = async () => {
+    setGroupsLoading(true);
+    try {
+      const res = await api.get('/auth/sso/groups') as { groups: string[] };
+      setKnownGroups(res?.groups || []);
+    } catch (err: any) {
+      setError(err.message || 'Gruppen konnten nicht geladen werden.');
+    } finally {
+      setGroupsLoading(false);
     }
   };
 
@@ -411,14 +427,54 @@ function AuthSettings() {
                   </span>
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">GRUPPE (AUS TOKEN)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="z.B. it-admins"
-                    value={newGroupKey}
-                    onChange={e => setNewGroupKey(e.target.value)}
-                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className="form-label">GRUPPE (AUS TOKEN)</label>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={loadSsoGroups}
+                      disabled={groupsLoading}
+                      style={{ padding: '2px 8px', fontSize: '0.72rem' }}
+                    >
+                      <RefreshCw size={12} /> {groupsLoading ? 'Lädt...' : 'Gruppen neu laden'}
+                    </button>
+                  </div>
+                  {newGroupCustom ? (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="z.B. it-admins"
+                        value={newGroupKey}
+                        onChange={e => setNewGroupKey(e.target.value)}
+                      />
+                      <button type="button" className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: '0.75rem' }} onClick={() => setNewGroupCustom(false)}>
+                        Aus Liste wählen
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      className="form-select"
+                      value={newGroupKey}
+                      onChange={e => {
+                        const v = e.target.value;
+                        if (v === '__custom__') {
+                          setNewGroupCustom(true);
+                          setNewGroupKey('');
+                        } else {
+                          setNewGroupCustom(false);
+                          setNewGroupKey(v);
+                        }
+                      }}
+                    >
+                      <option value="">— Gruppe auswählen —</option>
+                      {knownGroups.map(g => <option key={g} value={g}>{g}</option>)}
+                      <option value="__custom__">✎ Andere Gruppe eingeben…</option>
+                    </select>
+                  )}
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Gruppen werden aus den SSO-Anmeldungen der Benutzer geladen ({knownGroups.length} bekannt).
+                  </span>
                 </div>
                 <div className="form-group">
                   <label className="form-label">ROLLE</label>

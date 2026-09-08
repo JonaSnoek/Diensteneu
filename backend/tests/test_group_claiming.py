@@ -243,6 +243,33 @@ def test_new_sso_user_gets_mapped_role_and_groups_stored(client, db_session, sso
     assert user.sso_groups == ["Admins"]
 
 
+# ------------------------------------------------- SSO group catalog for the admin UI
+def test_sso_groups_endpoint_aggregates_only_for_admins(client, db_session):
+    from tests.conftest import make_local_user
+    config = load_config()
+    enable_sso(config, group_mapping={"Teachers": "Editor", "Admins": "Administrator"})
+    save_config(config)
+
+    db_session.add_all([
+        User(username="bob", role="User", is_active=True, sso_groups=["Admins"]),
+        User(username="carol", role="User", is_active=True, sso_groups=["Students", "Teachers"]),
+        make_local_user(db_session, username="root", role="Root"),
+    ])
+    db_session.commit()
+
+    # unauthenticated -> 401
+    assert client.get("/api/auth/sso/groups").status_code == 401
+
+    login = client.post("/api/auth/login", json={"username": "root", "password": "admin123"})
+    assert login.status_code == 200
+    token = login.json()["access_token"]
+
+    resp = client.get("/api/auth/sso/groups", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    # groups from users' SSO claims + already configured mapping keys, deduplicated
+    assert set(resp.json()["groups"]) == {"Admins", "Students", "Teachers"}
+
+
 def test_sso_user_group_never_downgrades_ldap_admin(client, db_session, sso_discovery, monkeypatch):
     config = load_config()
     _add_enabled_ldap_config(config, mapping={"admins": "Administrator"})
