@@ -95,9 +95,9 @@ function Login({ onLoginSuccess, onGuestContinue, settings }: LoginProps) {
     <div className="login-shell">
       <div className="login-card">
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          {settings?.logo_url ? (
+          {settings?.login_logo_url || settings?.logo_url ? (
             <img
-              src={resolveUrl(settings.logo_url)} alt="Logo"
+              src={resolveUrl(settings?.login_logo_url || settings?.logo_url || '')} alt="Logo"
               style={{ maxHeight: '44px', marginBottom: '14px', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))' }}
             />
           ) : (

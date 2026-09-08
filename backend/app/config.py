@@ -52,6 +52,10 @@ class SsoConfig(BaseModel):
 class SystemSettings(BaseModel):
     portal_name: str = "Central Service Portal"
     logo_url: Optional[str] = None
+    # Separate, independently replaceable brand assets.
+    header_logo_url: Optional[str] = None   # wide logo in the top bar (replaces the text word)
+    login_logo_url: Optional[str] = None    # logo shown on the login card
+    favicon_url: Optional[str] = None       # small icon as browser tab favicon
     primary_color: str = "#00c8ff" # Neon Blue
     accent_color: str = "#9d00ff" # Neon Purple
     allow_guest_access: bool = True

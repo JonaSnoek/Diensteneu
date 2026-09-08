@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { api, apiEvents } from './utils/api';
+import { api, apiEvents, resolveUrl } from './utils/api';
 import Layout from './components/Layout';
 import Setup from './pages/Setup';
 import Login from './pages/Login';
@@ -32,12 +32,29 @@ export type UserType = {
 export type SystemSettingsType = {
   portal_name: string;
   logo_url: string | null;
+  header_logo_url: string | null;
+  login_logo_url: string | null;
+  favicon_url: string | null;
   primary_color: string;
   accent_color: string;
   allow_guest_access: boolean;
   allow_local_registration: boolean;
   session_timeout_minutes: number;
 };
+
+function applyFavicon(settings: SystemSettingsType) {
+  if (!settings.favicon_url) return;
+  const src = resolveUrl(settings.favicon_url);
+  const existing = document.querySelector('link[rel~="icon"]') as HTMLLinkElement | null;
+  if (existing) {
+    existing.href = src;
+  } else {
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.href = src;
+    document.head.appendChild(link);
+  }
+}
 
 function hexToRgb(hex: string): string {
   if (!hex) return '59, 130, 246';
@@ -63,6 +80,7 @@ function App() {
       document.documentElement.style.setProperty('--primary-color', sysSettings.primary_color);
       document.documentElement.style.setProperty('--primary-rgb', hexToRgb(sysSettings.primary_color));
       document.title = sysSettings.portal_name;
+      applyFavicon(sysSettings);
 
       const setupStatus = await api.get('/setup/status') as { setup_completed: boolean };
       if (!setupStatus.setup_completed) {
@@ -157,7 +175,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-          <Route element={<Layout user={user} onLogout={handleLogout} />}>
+          <Route element={<Layout user={user} onLogout={handleLogout} settings={settings} />}>
             <Route path="/desktop" element={<Dashboard user={user} />} />
             <Route path="/desktop/:category" element={<Dashboard user={user} />} />
           <Route path="/admin" element={<AdminView user={user} />}>

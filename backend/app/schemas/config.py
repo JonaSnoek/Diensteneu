@@ -37,6 +37,9 @@ class SsoConfigSchema(BaseModel):
 class SystemSettingsUpdate(BaseModel):
     portal_name: Optional[str] = None
     logo_url: Optional[str] = None
+    header_logo_url: Optional[str] = None
+    login_logo_url: Optional[str] = None
+    favicon_url: Optional[str] = None
     primary_color: Optional[str] = None
     accent_color: Optional[str] = None
     allow_guest_access: Optional[bool] = None

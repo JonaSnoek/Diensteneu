@@ -23,9 +23,49 @@ type DbStatusType = {
   server_time: string;
 };
 
+type LogoFieldProps = {
+  label: string;
+  hint: string;
+  value: string;
+  uploading: boolean;
+  onChange: (value: string) => void;
+  onUpload: () => void;
+};
+
+function LogoField({ label, hint, value, uploading, onChange, onUpload }: LogoFieldProps) {
+  return (
+    <div style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Image size={14} color="var(--text-muted)" />
+        <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{hint}</span>
+      </div>
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <input
+          type="text" className="form-input"
+          placeholder="URL oder leer lassen (Standard-Text)"
+          value={value} onChange={e => onChange(e.target.value)} style={{ flex: 1 }}
+        />
+        <button type="button" className="btn" onClick={onUpload} disabled={uploading} style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Upload size={15} /> {uploading ? 'Lade...' : 'Hochladen'}
+        </button>
+      </div>
+      {value && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <img src={resolveUrl(value)} alt="Logo-Vorschau" style={{ height: '32px', objectFit: 'contain' }} onError={e => (e.currentTarget.style.display = 'none')} />
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', wordBreak: 'break-all' }}>{value}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SystemSettings({ settings: initialSettings }: SystemSettingsProps) {
   const [portalName, setPortalName] = useState(initialSettings.portal_name);
   const [logoUrl, setLogoUrl] = useState(initialSettings.logo_url || '');
+  const [headerLogoUrl, setHeaderLogoUrl] = useState(initialSettings.header_logo_url || '');
+  const [loginLogoUrl, setLoginLogoUrl] = useState(initialSettings.login_logo_url || '');
+  const [faviconUrl, setFaviconUrl] = useState(initialSettings.favicon_url || '');
   const [primaryColor, setPrimaryColor] = useState(initialSettings.primary_color);
   const [accentColor, setAccentColor] = useState(initialSettings.accent_color);
   const [allowGuest, setAllowGuest] = useState(initialSettings.allow_guest_access);
@@ -35,26 +75,36 @@ function SystemSettings({ settings: initialSettings }: SystemSettingsProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Logo upload
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+  // Logo uploads
+  const [uploadingLogo, setUploadingLogo] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileTargetRef = useRef<'login' | 'header' | 'favicon'>('login');
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    const target = fileTargetRef.current;
     if (!file) return;
-    setUploadingLogo(true);
+    setUploadingLogo(target);
     setError('');
     setSuccess('');
     try {
-      const result = await api.upload('/system/upload-logo', file) as any;
-      setLogoUrl(result.logo_url);
+      const result = await api.upload(`/system/upload-logo?target=${target}`, file) as any;
+      const url = result.logo_url;
+      if (target === 'header') { setHeaderLogoUrl(url); if (!logoUrl) setLogoUrl(url); }
+      else if (target === 'favicon') { setFaviconUrl(url); }
+      else { setLoginLogoUrl(url); setLogoUrl(url); }
       setSuccess('Logo erfolgreich hochgeladen. Seite evtl. neu laden (F5) für den Effekt.');
     } catch (err: any) {
       setError(err.message || 'Logo-Upload fehlgeschlagen.');
     } finally {
-      setUploadingLogo(false);
+      setUploadingLogo(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const triggerUpload = (target: 'login' | 'header' | 'favicon') => {
+    fileTargetRef.current = target;
+    fileInputRef.current?.click();
   };
 
   // Diagnostic Status
@@ -83,6 +133,9 @@ function SystemSettings({ settings: initialSettings }: SystemSettingsProps) {
       const updated = await api.put('/system/settings', {
         portal_name: portalName,
         logo_url: logoUrl || null,
+        header_logo_url: headerLogoUrl || null,
+        login_logo_url: loginLogoUrl || null,
+        favicon_url: faviconUrl || null,
         primary_color: primaryColor,
         accent_color: accentColor,
         allow_guest_access: allowGuest,
@@ -93,6 +146,19 @@ function SystemSettings({ settings: initialSettings }: SystemSettingsProps) {
       document.documentElement.style.setProperty('--primary-color', updated.primary_color);
       document.documentElement.style.setProperty('--accent-color', updated.accent_color);
       document.title = updated.portal_name;
+
+      // Refresh favicon <link> with the new uploaded icon
+      const favSrc = resolveUrl(updated.favicon_url || '');
+      const iconLink = document.querySelector('link[rel~="icon"]') as HTMLLinkElement | null;
+      if (updated.favicon_url) {
+        if (iconLink) iconLink.href = favSrc;
+        else {
+          const link = document.createElement('link');
+          link.rel = 'icon';
+          link.href = favSrc;
+          document.head.appendChild(link);
+        }
+      }
 
       setSuccess('Systemeinstellungen erfolgreich aktualisiert. Bitte laden Sie das Portal ggf. neu, um alle Designänderungen zu sehen.');
     } catch (err: any) {
@@ -121,21 +187,39 @@ function SystemSettings({ settings: initialSettings }: SystemSettingsProps) {
           </div>
 
           <div className="form-group">
-            <label className="form-label">LOGO</label>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
-              <input type="text" className="form-input" placeholder="z.B. https://example.com/logo.png (Leer lassen für Standard-Text)" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} style={{ flex: 1 }} />
-              <input ref={fileInputRef} type="file" accept=".png,.jpg,.jpeg,.gif,.svg" onChange={handleLogoUpload} style={{ display: 'none' }} />
-              <button type="button" className="btn" onClick={() => fileInputRef.current?.click()} disabled={uploadingLogo} style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Upload size={15} /> {uploadingLogo ? 'Lade...' : 'Hochladen'}
-              </button>
-            </div>
-            {logoUrl && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px' }}>
-                <Image size={14} color="var(--text-muted)" />
-                <img src={resolveUrl(logoUrl)} alt="Logo-Vorschau" style={{ height: '32px', objectFit: 'contain' }} onError={e => (e.currentTarget.style.display = 'none')} />
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', wordBreak: 'break-all' }}>{logoUrl}</span>
+            <label className="form-label">LOGOS</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <LogoField
+                label="Login-Logo"
+                hint="(Login-Karte)"
+                value={loginLogoUrl}
+                uploading={uploadingLogo === 'login'}
+                onChange={setLoginLogoUrl}
+                onUpload={() => triggerUpload('login')}
+              />
+              <LogoField
+                label="Header-Logo"
+                hint="(breites Logo oben, ersetzt den Text)"
+                value={headerLogoUrl}
+                uploading={uploadingLogo === 'header'}
+                onChange={setHeaderLogoUrl}
+                onUpload={() => triggerUpload('header')}
+              />
+              <LogoField
+                label="Favicon"
+                hint="(Browser-Tab-Icon)"
+                value={faviconUrl}
+                uploading={uploadingLogo === 'favicon'}
+                onChange={setFaviconUrl}
+                onUpload={() => triggerUpload('favicon')}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input ref={fileInputRef} type="file" accept=".png,.jpg,.jpeg,.gif,.svg,.webp,.ico" onChange={handleLogoUpload} style={{ display: 'none' }} />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Alle drei werden unabhängig voneinander ersetzt. Ohne Header-Logo wird Logo + Portalname als Text angezeigt.
+                </span>
               </div>
-            )}
+            </div>
           </div>
 
           <div className="form-row">

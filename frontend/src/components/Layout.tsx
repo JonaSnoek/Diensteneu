@@ -1,17 +1,32 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import { LogOut, Settings } from 'lucide-react';
 import Logo from './Logo';
-import type { UserType } from '../App';
+import { resolveUrl } from '../utils/api';
+import type { SystemSettingsType, UserType } from '../App';
 
 type LayoutProps = {
   user: UserType;
   onLogout: () => void;
+  settings: SystemSettingsType | null;
 };
 
-function Layout({ user, onLogout }: LayoutProps) {
+function Layout({ user, onLogout, settings }: LayoutProps) {
   const navigate = useNavigate();
   const effective = user.effective_role || user.role;
   const isAdmin = effective === 'Root' || effective === 'Admin';
+
+  const brand = settings?.header_logo_url ? (
+    <img
+      src={resolveUrl(settings.header_logo_url)}
+      alt={settings.portal_name}
+      style={{ height: '26px', maxWidth: '220px', objectFit: 'contain' }}
+    />
+  ) : (
+    <>
+      <Logo size={22} showText={false} />
+      <span>{settings?.portal_name || 'Services'}</span>
+    </>
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg)' }}>
@@ -31,8 +46,7 @@ function Layout({ user, onLogout }: LayoutProps) {
             fontSize: '0.9rem', fontWeight: 700, padding: '4px 0',
           }}
         >
-          <Logo size={22} showText={false} />
-          Services
+          {brand}
         </button>
 
         <div style={{ flex: 1 }} />
